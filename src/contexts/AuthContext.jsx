@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
     return unsubscribe
   }, [])
 
-  const value = { currentUser, loading, signIn, signOut }
+  const value = { currentUser, loading, signIn, signOut, login: signIn, logout: signOut  }
 
   if (loading) {
     return (
