@@ -13,7 +13,6 @@ import Reviews from './pages/Reviews'
 import ReferralLanding from './pages/ReferralLanding'
 import FreeSharpening from './pages/FreeSharpening'
 import CustomerCapture from './pages/CustomerCapture'
-import FreeSharpening from './pages/FreeSharpening'
 
 function RootRedirect() {
   const { currentUser } = useAuth()
