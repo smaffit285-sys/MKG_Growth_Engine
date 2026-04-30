@@ -35,7 +35,7 @@ export default function CustomerCapture() {
                           return
                 }
                 const referralCode = generateReferralCode()
-                const docRef = await addDoc(collection(db, 'customers'), {
+                await addDoc(collection(db, 'customers'), {
                           firstName: form.firstName,
                           lastName: form.lastName,
                           email: form.email,
