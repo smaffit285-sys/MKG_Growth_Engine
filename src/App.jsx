@@ -6,6 +6,9 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Customers from './pages/Customers'
 import CustomerDetail from './pages/CustomerDetail'
+import CommercialAccounts from './pages/CommercialAccounts'
+import Timeline from './pages/Timeline'
+import SharpeningSessions from './pages/SharpeningSessions'
 import Referrals from './pages/Referrals'
 import Rewards from './pages/Rewards'
 import UGC from './pages/UGC'
@@ -23,11 +26,7 @@ function RootRedirect() {
 }
 
 function ProtectedLayout({ children }) {
-  return (
-    <ProtectedRoute>
-      <Layout>{children}</Layout>
-    </ProtectedRoute>
-  )
+  return <ProtectedRoute><Layout>{children}</Layout></ProtectedRoute>
 }
 
 export default function App() {
@@ -38,6 +37,9 @@ export default function App() {
       <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
       <Route path="/customers" element={<ProtectedLayout><Customers /></ProtectedLayout>} />
       <Route path="/customer/:id" element={<ProtectedLayout><CustomerDetail /></ProtectedLayout>} />
+      <Route path="/commercial" element={<ProtectedLayout><CommercialAccounts /></ProtectedLayout>} />
+      <Route path="/timeline" element={<ProtectedLayout><Timeline /></ProtectedLayout>} />
+      <Route path="/sessions" element={<ProtectedLayout><SharpeningSessions /></ProtectedLayout>} />
       <Route path="/referrals" element={<ProtectedLayout><Referrals /></ProtectedLayout>} />
       <Route path="/rewards" element={<ProtectedLayout><Rewards /></ProtectedLayout>} />
       <Route path="/ugc" element={<ProtectedLayout><UGC /></ProtectedLayout>} />
