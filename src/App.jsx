@@ -9,6 +9,10 @@ import CustomerDetail from './pages/CustomerDetail'
 import CommercialAccounts from './pages/CommercialAccounts'
 import Timeline from './pages/Timeline'
 import SharpeningSessions from './pages/SharpeningSessions'
+import ContentPipeline from './pages/ContentPipeline'
+import ProofVault from './pages/ProofVault'
+import TrainingDashboard from './pages/TrainingDashboard'
+import Invoices from './pages/Invoices'
 import Referrals from './pages/Referrals'
 import Rewards from './pages/Rewards'
 import UGC from './pages/UGC'
@@ -40,6 +44,10 @@ export default function App() {
       <Route path="/commercial" element={<ProtectedLayout><CommercialAccounts /></ProtectedLayout>} />
       <Route path="/timeline" element={<ProtectedLayout><Timeline /></ProtectedLayout>} />
       <Route path="/sessions" element={<ProtectedLayout><SharpeningSessions /></ProtectedLayout>} />
+      <Route path="/content" element={<ProtectedLayout><ContentPipeline /></ProtectedLayout>} />
+      <Route path="/proof" element={<ProtectedLayout><ProofVault /></ProtectedLayout>} />
+      <Route path="/training" element={<ProtectedLayout><TrainingDashboard /></ProtectedLayout>} />
+      <Route path="/invoices" element={<ProtectedLayout><Invoices /></ProtectedLayout>} />
       <Route path="/referrals" element={<ProtectedLayout><Referrals /></ProtectedLayout>} />
       <Route path="/rewards" element={<ProtectedLayout><Rewards /></ProtectedLayout>} />
       <Route path="/ugc" element={<ProtectedLayout><UGC /></ProtectedLayout>} />
