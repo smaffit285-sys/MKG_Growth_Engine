@@ -7,6 +7,10 @@ const NAV_ITEMS = [
   { path: '/commercial', label: 'Commercial', icon: '🏢' },
   { path: '/timeline', label: 'Timeline', icon: '🕒' },
   { path: '/sessions', label: 'Sessions', icon: '🔪' },
+  { path: '/content', label: 'Content', icon: '🎬' },
+  { path: '/proof', label: 'Proof Vault', icon: '🏆' },
+  { path: '/training', label: 'Training', icon: '🧠' },
+  { path: '/invoices', label: 'Invoices', icon: '🧾' },
   { path: '/referrals', label: 'Referrals', icon: '🔗' },
   { path: '/rewards', label: 'Rewards', icon: '⭐' },
   { path: '/ugc', label: 'UGC', icon: '📸' },
@@ -35,7 +39,7 @@ export default function Layout({ children }) {
           <h1 className="text-orange-500 font-bold text-lg leading-tight tracking-tight">Miami Knife Guy</h1>
           <p className="text-zinc-500 text-xs mt-1">Growth Engine</p>
         </div>
-        <div className="flex-1 space-y-0.5">
+        <div className="flex-1 space-y-0.5 overflow-y-auto">
           {NAV_ITEMS.map(item => (
             <Link key={item.path} to={item.path} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors ${location.pathname === item.path ? 'bg-orange-500/20 text-orange-400 font-medium' : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'}`}>
               <span className="text-base">{item.icon}</span>
