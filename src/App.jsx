@@ -15,6 +15,7 @@ import FreeSharpening from './pages/FreeSharpening'
 import CustomerCapture from './pages/CustomerCapture'
 import ReviewSubmit from './pages/ReviewSubmit'
 import UGCSubmit from './pages/UGCSubmit'
+import Settings from './pages/Settings'
 
 function RootRedirect() {
   const { currentUser } = useAuth()
@@ -41,6 +42,7 @@ export default function App() {
       <Route path="/rewards" element={<ProtectedLayout><Rewards /></ProtectedLayout>} />
       <Route path="/ugc" element={<ProtectedLayout><UGC /></ProtectedLayout>} />
       <Route path="/reviews" element={<ProtectedLayout><Reviews /></ProtectedLayout>} />
+      <Route path="/settings" element={<ProtectedLayout><Settings /></ProtectedLayout>} />
       <Route path="/r/:referralCode" element={<ReferralLanding />} />
       <Route path="/register" element={<CustomerCapture />} />
       <Route path="/review" element={<ReviewSubmit />} />
