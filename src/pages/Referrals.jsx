@@ -5,11 +5,9 @@ import {
   onSnapshot,
   query,
   orderBy,
+  limit,
   doc,
   updateDoc,
-  addDoc,
-  getDocs,
-  where,
   serverTimestamp,
   getDoc,
 } from 'firebase/firestore'
@@ -29,7 +27,8 @@ export default function Referrals() {
   const [processing, setProcessing] = useState({})
 
   useEffect(() => {
-    const q = query(collection(db, 'referrals'), orderBy('createdAt', 'desc'))
+    // TODO: implement pagination for scale
+    const q = query(collection(db, 'referrals'), orderBy('createdAt', 'desc'), limit(50))
     const unsub = onSnapshot(q, async (snap) => {
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       setReferrals(docs)
@@ -56,35 +55,15 @@ export default function Referrals() {
     return c ? c.firstName + ' ' + c.lastName : id || 'Unknown'
   }
 
+  // ISSUE 1 FIX: Only update referral status — reward write moved to Cloud Function onReferralComplete
   const handleComplete = async (referral) => {
     if (processing[referral.id]) return
     setProcessing(p => ({ ...p, [referral.id]: true }))
     try {
       await updateDoc(doc(db, 'referrals', referral.id), {
         status: 'completed',
-        referralRewardIssued: true,
         completedServiceDate: serverTimestamp(),
       })
-      await updateDoc(doc(db, 'customers', referral.referringCustomerId), {
-        rewardsBalance: (customers[referral.referringCustomerId]?.rewardsBalance || 0) + 20,
-        completedReferrals: (customers[referral.referringCustomerId]?.completedReferrals || 0) + 1,
-      })
-      const ledgerRef = await addDoc(collection(db, 'rewardLedger'), {
-        customerId: referral.referringCustomerId,
-        type: 'referral_complete',
-        amount: 20,
-        status: 'issued',
-        source: 'referral',
-        relatedReferralId: referral.id,
-        createdAt: serverTimestamp(),
-      })
-      const pendingQ = query(
-        collection(db, 'rewardLedger'),
-        where('relatedReferralId', '==', referral.id),
-        where('status', '==', 'pending')
-      )
-      const pendingSnap = await getDocs(pendingQ)
-      await Promise.all(pendingSnap.docs.map(d => updateDoc(d.ref, { status: 'issued' })))
     } catch (e) {
       console.error(e)
     } finally {
@@ -113,7 +92,7 @@ export default function Referrals() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-white mb-6">Referrals</h1>
+      <h1 className="text-2xl font-bold text-neon-cyan mb-6">Referrals</h1>
       <div className="flex gap-2 mb-6">
         {tabs.map(t => (
           <button
@@ -121,7 +100,7 @@ export default function Referrals() {
             onClick={() => setFilter(t)}
             className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
               filter === t
-                ? 'bg-orange-500 text-white'
+                ? 'bg-neon-pink text-white'
                 : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
             }`}
           >
@@ -138,10 +117,10 @@ export default function Referrals() {
       ) : filtered.length === 0 ? (
         <div className="text-center text-gray-500 py-12">No referrals found</div>
       ) : (
-        <div className="bg-gray-900 rounded-xl overflow-hidden">
+        <div className="bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-800">
+              <tr className="border-b border-zinc-800">
                 <th className="text-left text-gray-400 text-sm font-medium px-4 py-3">Referring Customer</th>
                 <th className="text-left text-gray-400 text-sm font-medium px-4 py-3">Referred Customer</th>
                 <th className="text-left text-gray-400 text-sm font-medium px-4 py-3">Status</th>
@@ -151,7 +130,7 @@ export default function Referrals() {
             </thead>
             <tbody>
               {filtered.map((referral) => (
-                <tr key={referral.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                <tr key={referral.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">
                   <td className="px-4 py-3 text-white text-sm">{getName(referral.referringCustomerId)}</td>
                   <td className="px-4 py-3 text-white text-sm">{getName(referral.referredCustomerId)}</td>
                   <td className="px-4 py-3">
