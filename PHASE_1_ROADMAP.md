@@ -40,8 +40,27 @@ MKG is not only a knife sharpening service. The platform must support a connecte
 - Chef partnerships and chef-club expansion
 - Sharpening tower upgrades for Perfect Edge systems
 - Future user app with camera/AR education, knife assessment, knife selection guidance, user content, offers, and merch incentives
-- Future SharpBot licensing
 - Future white-labeled CRM, growth engine, marketing materials, and invoicing for sharpeners
+
+### SharpBot Venture Context
+SharpBot should be treated as a separate national-scale retail automation venture that can benefit from MKG proof, data, content, and operational credibility, but should not be architecturally collapsed into the local MKG Growth Engine.
+
+SharpBot concept:
+- Fully autonomous AI-driven robotic sharpening kiosk
+- Sub-millimeter precision sharpening target
+- Multi-sensor suite including 8K video, ultrasonic hardness testing, pressure sensors, accelerometers, and additional instrumentation
+- Automated retail placement in grocery stores, Costco-style big-box environments, and other high-frequency shopping locations
+- Customer workflow: drop off knives, shop, receive automated completion message, pay digitally, retrieve knives from automated locker system
+- Live video feed of sharpening process
+- Integrated UGC and customer proof display
+- National deployment target: minimum 5,000 kiosks concentrated in and around metropolitan centers
+
+Growth Engine relevance:
+- Capture early market proof for consumer demand
+- Track objection data around automated sharpening trust
+- Track knife condition / service outcome datasets where legally and ethically available
+- Build authority content that de-risks robotic sharpening perception
+- Preserve future integration paths for customer identity, offers, loyalty, reviews, and UGC
 
 ---
 
@@ -101,9 +120,9 @@ contentPipeline/{contentId}
 ```
 Track:
 - channel: youtube | instagram | facebook | blog | ebook | podcast | press | short_form
-- audience: chefs | home_cooks | restaurants | hotels | yacht_clubs | sharpeners | members
+- audience: chefs | home_cooks | restaurants | hotels | yacht_clubs | sharpeners | members | investors | retail_partners
 - stage: idea | scripted | filmed | edited | scheduled | published | repurposed
-- authorityGoal: education | trust | proof | offer | founder_story | technical_expertise
+- authorityGoal: education | trust | proof | offer | founder_story | technical_expertise | automation_trust | investor_credibility
 - linkedOffer
 - publishDate
 - metrics
@@ -124,6 +143,8 @@ Track:
 - press_mention
 - podcast_appearance
 - youtube_feature
+- technical_demo
+- automation_trust_asset
 
 ### 5. Analytics Optimization
 Move heavy dashboard calculations to:
@@ -169,7 +190,7 @@ The defensibility target is not only local sharpening volume. It is the combinat
 8. Technical sharpening-system upgrades
 9. Future AR/user app engagement
 10. Future white-label growth engine for sharpeners
-11. SharpBot licensing opportunity
+11. SharpBot national robotic kiosk venture, kept strategically distinct from MKG while supported by MKG proof and trust assets
 
 ---
 
@@ -206,6 +227,16 @@ The defensibility target is not only local sharpening volume. It is the combinat
 - Feature requests from other sharpeners
 - Operational workflows mature enough to package
 
+### SharpBot Readiness
+- Retail partner conversations
+- Consumer trust objections
+- Automation trust content performance
+- Technical demo proof assets
+- Kiosk workflow validation
+- Locker/payment/message workflow assumptions
+- Sensor and QA data strategy
+- Safety and liability requirements
+
 ---
 
 ## Strategic Goal
@@ -215,4 +246,7 @@ Transition from:
 Into:
 ### B2B-First Knife Care Authority + Local Trust Brand + Sharpening Growth OS
 
-Franchising is not a near-term focus. The near-term priority is proof, recurring commercial revenue, brand authority, and operational repeatability. Future scalability should preserve room for SharpBot licensing and white-labeled CRM/growth-engine opportunities.
+While preserving a separate path for:
+### SharpBot — National Autonomous Robotic Knife-Sharpening Retail Infrastructure
+
+Franchising is not a near-term focus. The near-term priority is proof, recurring commercial revenue, brand authority, and operational repeatability. Future scalability should preserve room for SharpBot as a separate venture and for white-labeled CRM/growth-engine opportunities.
