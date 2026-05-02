@@ -1,112 +1,186 @@
-# Deployment URL Strategy
+# MKG Domain Stack Strategy
 
-## Current Preferred Domain
+## Final Recommended Stack
 
-Primary public brand domain:
+### 1. Public Brand / SEO / Trust
 ```txt
-miamiknifeguy.com
+https://miamiknifeguy.com
 ```
 
-Secondary owned domain:
-```txt
-miamiknifeguy.club
-```
+Purpose:
+- Main public website
+- SEO authority
+- service pages
+- Sharp After Dark positioning
+- chef trust
+- content hub
+- ebook funnel
+- workshop pages
+- press/media credibility
+- public conversion paths
+
+Do not let internal admin tools dominate this root experience.
 
 ---
 
-## Recommended Near-Term Structure
-
-Because `miamiknifeguy.com` is the main customer-facing brand domain, the Growth Engine should avoid taking over the entire root site unless the public website is also being migrated into this same React app.
-
-Recommended structure:
-
-```txt
-https://miamiknifeguy.com/              Public website
-https://miamiknifeguy.com/register      Customer capture
-https://miamiknifeguy.com/review        Review submission
-https://miamiknifeguy.com/ugc-submit    UGC submission
-https://miamiknifeguy.com/free-sharpening Public offer funnel
-https://miamiknifeguy.com/r/:code       Referral landing
-```
-
-Internal admin/operator routes:
-
-```txt
-https://miamiknifeguy.com/login
-https://miamiknifeguy.com/dashboard
-https://miamiknifeguy.com/customers
-https://miamiknifeguy.com/commercial
-https://miamiknifeguy.com/timeline
-https://miamiknifeguy.com/sessions
-https://miamiknifeguy.com/content
-https://miamiknifeguy.com/proof
-https://miamiknifeguy.com/training
-https://miamiknifeguy.com/invoices
-```
-
----
-
-## Safer Alternative
-
-If the current public website is already deployed separately, the Growth Engine should be deployed on a subdomain instead:
-
+### 2. Growth Engine / Operations / Admin
 ```txt
 https://engine.miamiknifeguy.com
 ```
 
-or
+Purpose:
+- CRM
+- customers
+- commercial pipeline
+- invoices
+- reviews moderation
+- UGC moderation
+- training dashboard
+- proof vault
+- content pipeline
+- sharpening sessions
+- internal timeline
+- operational analytics
 
+Primary admin entry:
 ```txt
-https://app.miamiknifeguy.com
+https://engine.miamiknifeguy.com/login
 ```
 
-Then customer-facing operational funnels could be:
-
+Primary dashboard:
 ```txt
-https://app.miamiknifeguy.com/register
-https://app.miamiknifeguy.com/review
-https://app.miamiknifeguy.com/ugc-submit
-https://app.miamiknifeguy.com/free-sharpening
+https://engine.miamiknifeguy.com/dashboard
 ```
-
-This avoids conflicts with the current marketing website.
 
 ---
 
-## Possible Use of miamiknifeguy.club
-
-`miamiknifeguy.club` may be useful later for:
-- VIP sharpening club
-- member portal
-- community offers
-- events/workshops
-- loyalty campaigns
-
-Recommended future use:
-
+### 3. Membership / Community / Loyalty
 ```txt
 https://miamiknifeguy.club
 ```
 
-as the membership/community layer, not the main admin engine.
+Purpose:
+- VIP sharpening club
+- member offers
+- loyalty campaigns
+- workshops
+- member education
+- exclusive drops
+- community content
+- future member portal
+
+This should feel separate from admin infrastructure and more like a premium customer/member experience.
 
 ---
 
-## Important Deployment Notes
+## Recommended Route Map
 
-The current `vercel.json` rewrites all routes to `index.html`, which is correct for a Vite/React single-page app.
+### Public Website Routes on `miamiknifeguy.com`
+```txt
+/                         Homepage
+/sharp-after-dark          B2B commercial service
+/services                  Consumer sharpening services
+/vip                       VIP membership overview
+/workshops                 Workshops and education
+/ebook                     Ebook funnel
+/content or /learn         Knowledge base / articles
+/partners                  Chef and local partner proof
+/contact                   Contact and quote request
+```
 
-However, if this project is deployed directly onto the root of `miamiknifeguy.com`, it will replace or conflict with any existing website also using that root domain.
+### Engine Routes on `engine.miamiknifeguy.com`
+```txt
+/login
+/dashboard
+/customers
+/customer/:id
+/commercial
+/timeline
+/sessions
+/content
+/proof
+/training
+/invoices
+/referrals
+/rewards
+/ugc
+/reviews
+/settings
+```
 
-Before connecting the root domain, decide whether:
+### Customer-Facing Operational Routes on `engine.miamiknifeguy.com`
+These can be linked from the public website or QR codes:
+```txt
+/register
+/review
+/ugc-submit
+/free-sharpening
+/r/:referralCode
+```
 
-1. This Growth Engine app is becoming the entire public website and admin app, or
-2. The existing website remains separate and the Growth Engine uses a subdomain.
+Later, these can be replaced with branded public routes or embedded flows if needed.
 
-Recommended near-term choice:
+---
 
+## Vercel Setup Recommendation
+
+Deploy the Growth Engine repo to:
 ```txt
 engine.miamiknifeguy.com
 ```
 
-Then later, selected customer-facing routes can be linked from the public website.
+Do not attach this repo to the root `miamiknifeguy.com` domain unless the public website is intentionally being migrated into this app.
+
+DNS likely requires:
+```txt
+Type: CNAME
+Name: engine
+Value: cname.vercel-dns.com
+```
+
+Vercel will show the exact DNS target to use.
+
+---
+
+## Public Website Linking Strategy
+
+The public website should link into the engine selectively:
+
+```txt
+Book / Register       -> https://engine.miamiknifeguy.com/register
+Leave a Review        -> https://engine.miamiknifeguy.com/review
+Submit UGC            -> https://engine.miamiknifeguy.com/ugc-submit
+Referral Link         -> https://engine.miamiknifeguy.com/r/:code
+Admin Login           -> https://engine.miamiknifeguy.com/login
+```
+
+Admin login should not be prominent in public navigation.
+
+---
+
+## Security Principle
+
+Customer-facing brand pages should be public.
+Internal operational pages should be protected by Firebase Auth and role-aware routing.
+
+Before launch, confirm:
+- Firebase Auth is active
+- Firestore rules protect admin collections
+- only intended public routes can write public submissions
+- Vercel environment variables are set
+- admin user exists
+
+---
+
+## Future Domain Use
+
+### `miamiknifeguy.com`
+Brand authority and public conversion.
+
+### `engine.miamiknifeguy.com`
+Business operating system.
+
+### `miamiknifeguy.club`
+VIP membership, community, and loyalty.
+
+This structure supports growth without confusing public customers, staff operators, members, commercial clients, or future licensing partners.
