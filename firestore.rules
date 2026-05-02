@@ -6,31 +6,108 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isStaffUser() {
+      return isAuth() && exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid));
+    }
+
+    function staffRole() {
+      return get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.role;
+    }
+
+    function isOwnerOrAdmin() {
+      return isStaffUser() && staffRole() in ['owner', 'admin'];
+    }
+
+    function isOperator() {
+      return isStaffUser() && staffRole() in ['owner', 'admin', 'staff', 'marketing', 'readonly'];
+    }
+
+    function isWriter() {
+      return isStaffUser() && staffRole() in ['owner', 'admin', 'staff', 'marketing'];
+    }
+
+    match /staffUsers/{userId} {
+      allow read: if isOwnerOrAdmin() || (isAuth() && request.auth.uid == userId);
+      allow create, update, delete: if isOwnerOrAdmin();
+    }
+
     match /customers/{customerId} {
-      allow read, write: if isAuth();
-      allow read: if request.query.limit <= 1;
+      allow create: if true;
+      allow read: if isOperator();
+      allow update, delete: if isWriter();
     }
 
     match /referrals/{referralId} {
-      allow read, write: if isAuth();
+      allow create: if true;
+      allow read, update, delete: if isWriter();
     }
 
     match /rewardLedger/{ledgerId} {
-      allow read, write: if isAuth();
+      allow read: if isOperator();
+      allow create, update, delete: if isOwnerOrAdmin();
     }
 
     match /reviewSubmissions/{reviewId} {
       allow create: if true;
-      allow read, update, delete: if isAuth();
+      allow read, update, delete: if isWriter();
     }
 
     match /ugcSubmissions/{ugcId} {
       allow create: if true;
-      allow read, update, delete: if isAuth();
+      allow read, update, delete: if isWriter();
+    }
+
+    match /commercialAccounts/{accountId} {
+      allow read: if isOperator();
+      allow create, update, delete: if isWriter();
+    }
+
+    match /customerEvents/{eventId} {
+      allow read: if isOperator();
+      allow create: if isWriter();
+      allow update, delete: if isOwnerOrAdmin();
+    }
+
+    match /contentPipeline/{contentId} {
+      allow read: if isOperator();
+      allow create, update, delete: if isWriter();
+    }
+
+    match /proofAssets/{assetId} {
+      allow read: if isOperator();
+      allow create, update, delete: if isWriter();
+    }
+
+    match /trainingSessions/{sessionId} {
+      allow read: if isOperator();
+      allow create: if isWriter();
+      allow update, delete: if isOwnerOrAdmin();
+    }
+
+    match /sharpeningSessions/{sessionId} {
+      allow read: if isOperator();
+      allow create: if isWriter();
+      allow update, delete: if isOwnerOrAdmin();
+    }
+
+    match /invoices/{invoiceId} {
+      allow read: if isOperator();
+      allow create, update: if isWriter();
+      allow delete: if isOwnerOrAdmin();
     }
 
     match /settings/{settingId} {
-      allow read, write: if isAuth();
+      allow read: if isOperator();
+      allow write: if isOwnerOrAdmin();
+    }
+
+    match /analytics/{docId} {
+      allow read: if isOperator();
+      allow write: if isOwnerOrAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
