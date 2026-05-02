@@ -6,6 +6,7 @@ export const COLLECTIONS = {
   PROOF_ASSETS: 'proofAssets',
   TRAINING_SESSIONS: 'trainingSessions',
   SHARPENING_SESSIONS: 'sharpeningSessions',
+  INVOICES: 'invoices',
   STAFF_USERS: 'staffUsers',
   ANALYTICS: 'analytics',
 }
@@ -57,6 +58,7 @@ export const EVENT_TYPES = {
   WORKSHOP_INTEREST_LOGGED: 'workshop_interest_logged',
   TRAINING_SESSION_COMPLETED: 'training_session_completed',
   QUALITY_CHECK_COMPLETED: 'quality_check_completed',
+  INVOICE_CREATED: 'invoice_created',
 }
 
 export const CONTENT_CHANNELS = {
@@ -98,4 +100,28 @@ export const TRAINING_OUTCOMES = {
   PASS: 'pass',
   NEEDS_REVIEW: 'needs_review',
   FAIL: 'fail',
+}
+
+export const INVOICE_TYPES = {
+  B2C: 'b2c',
+  B2B: 'b2b',
+}
+
+export const INVOICE_STATUS = {
+  DRAFT: 'draft',
+  SENT: 'sent',
+  PAID: 'paid',
+  OVERDUE: 'overdue',
+  VOID: 'void',
+}
+
+export const LINE_ITEM_TYPES = {
+  SHARPENING: 'sharpening',
+  REPAIR: 'repair',
+  RUSH: 'rush',
+  PICKUP_DELIVERY: 'pickup_delivery',
+  MEMBERSHIP: 'membership',
+  WORKSHOP: 'workshop',
+  COURSE: 'course',
+  OTHER: 'other',
 }
