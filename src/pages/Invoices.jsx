@@ -1,5 +1,6 @@
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
-import { useMemo, useState } from 'react'
+import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore'
+import { useEffect, useMemo, useState } from 'react'
+import { QRCodeCanvas } from 'qrcode.react'
 import { db } from '../lib/firebase'
 import {
   COLLECTIONS,
@@ -54,6 +55,13 @@ export default function Invoices() {
   const [signatureName, setSignatureName] = useState('')
   const [items, setItems] = useState([emptyItem])
   const [saved, setSaved] = useState(false)
+  const [invoiceHistory, setInvoiceHistory] = useState([])
+  const [invoiceSearch, setInvoiceSearch] = useState('')
+
+  useEffect(() => {
+    const q = query(collection(db, COLLECTIONS.INVOICES), orderBy('createdAt', 'desc'))
+    return onSnapshot(q, snap => setInvoiceHistory(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+  }, [])
 
   const totals = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + (Number(item.qty || 0) * Number(item.unitPrice || 0)), 0)
@@ -66,6 +74,7 @@ export default function Invoices() {
   }, [items, taxRate, discountAmount, amountPaid])
 
   const enabledPaymentOptions = useMemo(() => Object.entries(paymentOptions).filter(([, option]) => option.enabled), [paymentOptions])
+  const qrValue = paymentOptions[primaryPaymentMethod]?.value || invoiceTextFallback()
 
   const invoiceText = useMemo(() => {
     const billTo = invoiceType === INVOICE_TYPES.B2B ? businessName || customerName : customerName
@@ -73,6 +82,15 @@ export default function Invoices() {
     const paymentLine = primary?.value ? `${primary.label}: ${primary.value}` : `${primary?.label || 'Payment'} details available on invoice.`
     return `Miami Knife Guy invoice for ${billTo || 'customer'} — total $${totals.total.toFixed(2)}, balance due $${totals.balanceDue.toFixed(2)}. Preferred payment: ${paymentLine}`
   }, [invoiceType, businessName, customerName, totals.total, totals.balanceDue, paymentOptions, primaryPaymentMethod])
+
+  const filteredInvoices = useMemo(() => {
+    const term = invoiceSearch.toLowerCase()
+    return invoiceHistory.filter(inv => [inv.invoiceNumber, inv.customerName, inv.businessName, inv.customerPhone, inv.customerEmail, inv.status, inv.paymentStatus].filter(Boolean).join(' ').toLowerCase().includes(term)).slice(0, 25)
+  }, [invoiceHistory, invoiceSearch])
+
+  function invoiceTextFallback() {
+    return `Miami Knife Guy invoice balance due: $${totals.balanceDue.toFixed(2)}`
+  }
 
   function updateItem(index, field, value) {
     const copy = [...items]
@@ -89,6 +107,27 @@ export default function Invoices() {
   function applyTemplate(templateName) { setItems(TEMPLATES[templateName].map(item => ({ ...item }))); if (templateName === 'commercialMonthly') { setInvoiceType(INVOICE_TYPES.B2B); setRecurring(true); setRecurringCadence('monthly') } }
   function duplicateInvoice() { setStatus(INVOICE_STATUS.DRAFT); setPaymentStatus(PAYMENT_STATUS.UNPAID); setAmountPaid(0); setSaved(false) }
   function printInvoice() { window.print() }
+
+  function loadInvoice(inv) {
+    setInvoiceType(inv.invoiceType || INVOICE_TYPES.B2C)
+    setStatus(INVOICE_STATUS.DRAFT)
+    setPaymentStatus(PAYMENT_STATUS.UNPAID)
+    setCustomerName(inv.customerName || '')
+    setBusinessName(inv.businessName || '')
+    setCustomerPhone(inv.customerPhone || '')
+    setCustomerEmail(inv.customerEmail || '')
+    setDueDate(inv.dueDate || '')
+    setNotes(inv.notes || '')
+    setTaxRate(inv.taxRate || 0)
+    setDiscountAmount(inv.discountAmount || 0)
+    setPrimaryPaymentMethod(inv.primaryPaymentMethod || PAYMENT_METHODS.STRIPE)
+    setPaymentOptions(inv.paymentOptions || DEFAULT_PAYMENT_OPTIONS)
+    setAmountPaid(0)
+    setRecurring(Boolean(inv.recurring))
+    setRecurringCadence(inv.recurringCadence || 'monthly')
+    setSignatureName('')
+    setItems(inv.items?.length ? inv.items : [emptyItem])
+  }
 
   async function saveInvoice() {
     const invoiceNumber = `MKG-${Date.now()}`
@@ -116,6 +155,8 @@ export default function Invoices() {
       recurring,
       recurringCadence: recurring ? recurringCadence : null,
       signatureName,
+      providerIntegrationStatus: 'manual_links_ready_api_pending',
+      reminderStatus: 'not_scheduled',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
@@ -131,7 +172,7 @@ export default function Invoices() {
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2 no-print">
         <div>
           <h1 className="text-2xl font-bold text-orange-400">Mobile Invoice Builder</h1>
-          <p className="text-zinc-400 text-sm">Multi-rail B2B/B2C invoicing with Stripe, Cash App, Venmo, PayPal, cash, and crypto support.</p>
+          <p className="text-zinc-400 text-sm">Multi-rail invoicing with QR payment prep, history/search, print/PDF, SMS, email, and provider API placeholders.</p>
         </div>
         {saved && <div className="bg-green-500/20 text-green-400 rounded-xl px-3 py-2 text-sm">Invoice saved</div>}
       </div>
@@ -200,9 +241,17 @@ export default function Invoices() {
             <button onClick={duplicateInvoice} className="bg-zinc-800 rounded-xl py-3 text-white">Duplicate</button>
             <button onClick={saveInvoice} className="col-span-2 bg-orange-500 hover:bg-orange-600 rounded-xl py-3 text-white font-semibold">Save Invoice</button>
           </div>
+
+          <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+            <h2 className="text-orange-400 font-semibold">Invoice History</h2>
+            <input value={invoiceSearch} onChange={e => setInvoiceSearch(e.target.value)} placeholder="Search invoices" className="field w-full" />
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {filteredInvoices.map(inv => <button key={inv.id} onClick={() => loadInvoice(inv)} className="w-full text-left bg-zinc-950 border border-zinc-800 rounded-xl p-3 hover:border-orange-500"><div className="flex justify-between gap-3"><span className="text-white font-medium">{inv.businessName || inv.customerName || inv.invoiceNumber}</span><span className="text-orange-400">${Number(inv.total || 0).toFixed(2)}</span></div><p className="text-xs text-zinc-500">{inv.invoiceNumber} • {inv.status} • {inv.paymentStatus}</p></button>)}
+            </div>
+          </section>
         </div>
 
-        <InvoicePreview invoiceType={invoiceType} customerName={customerName} businessName={businessName} customerPhone={customerPhone} customerEmail={customerEmail} dueDate={dueDate} items={items} totals={totals} notes={notes} status={status} paymentStatus={paymentStatus} paymentOptions={enabledPaymentOptions} primaryPaymentMethod={primaryPaymentMethod} recurring={recurring} recurringCadence={recurringCadence} signatureName={signatureName} />
+        <InvoicePreview invoiceType={invoiceType} customerName={customerName} businessName={businessName} customerPhone={customerPhone} customerEmail={customerEmail} dueDate={dueDate} items={items} totals={totals} notes={notes} status={status} paymentStatus={paymentStatus} paymentOptions={enabledPaymentOptions} primaryPaymentMethod={primaryPaymentMethod} recurring={recurring} recurringCadence={recurringCadence} signatureName={signatureName} qrValue={qrValue} />
       </div>
     </div>
   )
@@ -211,7 +260,7 @@ export default function Invoices() {
 function Field({ label, children }) { return <label className="block"><span className="text-xs text-zinc-400">{label}</span>{children}</label> }
 function TemplateButton({ label, onClick }) { return <button type="button" onClick={onClick} className="bg-zinc-800 hover:bg-zinc-700 rounded-xl px-3 py-2 text-sm text-white">{label}</button> }
 
-function InvoicePreview({ invoiceType, customerName, businessName, customerPhone, customerEmail, dueDate, items, totals, notes, status, paymentStatus, paymentOptions, primaryPaymentMethod, recurring, recurringCadence, signatureName }) {
-  return <div className="print-area bg-white text-zinc-950 rounded-2xl p-5 h-fit sticky top-4"><div className="flex justify-between gap-4 border-b pb-4"><div><h2 className="text-2xl font-black tracking-tight">MIAMI KNIFE GUY</h2><p className="text-sm text-zinc-600">Premium Knife Care • Commercial Sharpening • Workshops</p></div><div className="text-right"><p className="text-xs uppercase text-zinc-500">Invoice</p><p className="font-bold">{status}</p><p className="text-xs text-zinc-600">Payment: {paymentStatus}</p></div></div><div className="grid grid-cols-2 gap-4 py-4 text-sm"><div><p className="text-zinc-500">Bill To</p><p className="font-semibold">{invoiceType === INVOICE_TYPES.B2B ? businessName || 'Business Name' : customerName || 'Customer Name'}</p>{invoiceType === INVOICE_TYPES.B2B && <p>{customerName}</p>}<p>{customerPhone}</p><p>{customerEmail}</p></div><div className="text-right"><p className="text-zinc-500">Due Date</p><p>{dueDate || 'Upon receipt'}</p>{recurring && <p className="mt-2 text-zinc-600">Recurring: {recurringCadence}</p>}</div></div><div className="border rounded-xl overflow-hidden text-sm"><div className="grid grid-cols-12 bg-zinc-100 font-semibold p-2"><div className="col-span-6">Item</div><div className="col-span-2 text-right">Qty</div><div className="col-span-2 text-right">Rate</div><div className="col-span-2 text-right">Total</div></div>{items.map((item, i) => <div key={i} className="grid grid-cols-12 p-2 border-t"><div className="col-span-6">{item.description || 'Service'}</div><div className="col-span-2 text-right">{item.qty}</div><div className="col-span-2 text-right">${Number(item.unitPrice || 0).toFixed(2)}</div><div className="col-span-2 text-right">${(Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2)}</div></div>)}</div><div className="mt-4 ml-auto max-w-xs space-y-1 text-sm"><Row label="Subtotal" value={totals.subtotal} /><Row label="Discount" value={-totals.discount} /><Row label="Tax" value={totals.tax} /><Row label="Paid" value={-Number(totals.total - totals.balanceDue || 0)} /><div className="flex justify-between border-t pt-2 text-lg font-black"><span>Balance Due</span><span>${totals.balanceDue.toFixed(2)}</span></div></div>{paymentOptions.length > 0 && <div className="mt-4 p-3 bg-zinc-100 rounded-xl text-sm"><p className="font-semibold">Payment Options</p><div className="space-y-2 mt-2">{paymentOptions.map(([method, option]) => <div key={method} className={method === primaryPaymentMethod ? 'border-l-4 border-orange-500 pl-2' : ''}><p className="font-semibold">{option.label}{method === primaryPaymentMethod ? ' — Preferred' : ''}</p>{option.value && <p className="break-all">{option.value}</p>}<p className="text-zinc-600">{option.instructions}</p></div>)}</div></div>}{notes && <div className="mt-4 text-sm"><p className="font-semibold">Notes</p><p className="text-zinc-600 whitespace-pre-wrap">{notes}</p></div>}<div className="mt-8 border-t pt-4 text-sm"><p className="text-zinc-500">Accepted By</p><p className="font-semibold min-h-6">{signatureName || '____________________________'}</p></div></div>
+function InvoicePreview({ invoiceType, customerName, businessName, customerPhone, customerEmail, dueDate, items, totals, notes, status, paymentStatus, paymentOptions, primaryPaymentMethod, recurring, recurringCadence, signatureName, qrValue }) {
+  return <div className="print-area bg-white text-zinc-950 rounded-2xl p-5 h-fit sticky top-4"><div className="flex justify-between gap-4 border-b pb-4"><div><h2 className="text-2xl font-black tracking-tight">MIAMI KNIFE GUY</h2><p className="text-sm text-zinc-600">Premium Knife Care • Commercial Sharpening • Workshops</p></div><div className="text-right"><p className="text-xs uppercase text-zinc-500">Invoice</p><p className="font-bold">{status}</p><p className="text-xs text-zinc-600">Payment: {paymentStatus}</p></div></div><div className="grid grid-cols-2 gap-4 py-4 text-sm"><div><p className="text-zinc-500">Bill To</p><p className="font-semibold">{invoiceType === INVOICE_TYPES.B2B ? businessName || 'Business Name' : customerName || 'Customer Name'}</p>{invoiceType === INVOICE_TYPES.B2B && <p>{customerName}</p>}<p>{customerPhone}</p><p>{customerEmail}</p></div><div className="text-right"><p className="text-zinc-500">Due Date</p><p>{dueDate || 'Upon receipt'}</p>{recurring && <p className="mt-2 text-zinc-600">Recurring: {recurringCadence}</p>}</div></div><div className="border rounded-xl overflow-hidden text-sm"><div className="grid grid-cols-12 bg-zinc-100 font-semibold p-2"><div className="col-span-6">Item</div><div className="col-span-2 text-right">Qty</div><div className="col-span-2 text-right">Rate</div><div className="col-span-2 text-right">Total</div></div>{items.map((item, i) => <div key={i} className="grid grid-cols-12 p-2 border-t"><div className="col-span-6">{item.description || 'Service'}</div><div className="col-span-2 text-right">{item.qty}</div><div className="col-span-2 text-right">${Number(item.unitPrice || 0).toFixed(2)}</div><div className="col-span-2 text-right">${(Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2)}</div></div>)}</div><div className="mt-4 ml-auto max-w-xs space-y-1 text-sm"><Row label="Subtotal" value={totals.subtotal} /><Row label="Discount" value={-totals.discount} /><Row label="Tax" value={totals.tax} /><Row label="Paid" value={-Number(totals.total - totals.balanceDue || 0)} /><div className="flex justify-between border-t pt-2 text-lg font-black"><span>Balance Due</span><span>${totals.balanceDue.toFixed(2)}</span></div></div>{paymentOptions.length > 0 && <div className="mt-4 p-3 bg-zinc-100 rounded-xl text-sm"><p className="font-semibold">Payment Options</p><div className="space-y-2 mt-2">{paymentOptions.map(([method, option]) => <div key={method} className={method === primaryPaymentMethod ? 'border-l-4 border-orange-500 pl-2' : ''}><p className="font-semibold">{option.label}{method === primaryPaymentMethod ? ' — Preferred' : ''}</p>{option.value && <p className="break-all">{option.value}</p>}<p className="text-zinc-600">{option.instructions}</p></div>)}</div><div className="mt-4 flex justify-center"><QRCodeCanvas value={qrValue || 'Miami Knife Guy'} size={132} /></div><p className="text-center text-xs text-zinc-500 mt-2">Scan for preferred payment details</p></div>}{notes && <div className="mt-4 text-sm"><p className="font-semibold">Notes</p><p className="text-zinc-600 whitespace-pre-wrap">{notes}</p></div>}<div className="mt-8 border-t pt-4 text-sm"><p className="text-zinc-500">Accepted By</p><p className="font-semibold min-h-6">{signatureName || '____________________________'}</p></div></div>
 }
 function Row({ label, value }) { return <div className="flex justify-between"><span>{label}</span><span>${Number(value || 0).toFixed(2)}</span></div> }
