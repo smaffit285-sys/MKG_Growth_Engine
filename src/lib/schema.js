@@ -125,3 +125,20 @@ export const LINE_ITEM_TYPES = {
   COURSE: 'course',
   OTHER: 'other',
 }
+
+export const PAYMENT_METHODS = {
+  STRIPE: 'stripe',
+  CASH_APP: 'cash_app',
+  VENMO: 'venmo',
+  PAYPAL: 'paypal',
+  CASH: 'cash',
+  CRYPTO: 'crypto',
+  OTHER: 'other',
+}
+
+export const PAYMENT_STATUS = {
+  UNPAID: 'unpaid',
+  PARTIAL: 'partial',
+  PAID: 'paid',
+  REFUNDED: 'refunded',
+}
