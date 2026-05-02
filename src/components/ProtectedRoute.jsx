@@ -1,8 +1,8 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
-export default function ProtectedRoute({ children }) {
-  const { currentUser, loading } = useAuth()
+export default function ProtectedRoute({ children, permission = null }) {
+  const { currentUser, loading, hasPermission } = useAuth()
 
   if (loading) {
     return (
@@ -14,6 +14,10 @@ export default function ProtectedRoute({ children }) {
 
   if (!currentUser) {
     return <Navigate to="/login" replace />
+  }
+
+  if (permission && !hasPermission(permission)) {
+    return <Navigate to="/" replace />
   }
 
   return children
