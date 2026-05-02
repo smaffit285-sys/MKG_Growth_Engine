@@ -1,7 +1,7 @@
 # MKG Growth Engine — Phase 1 Hardening Roadmap
 
 ## Objectives
-Stabilize the platform into operational infrastructure for the full Miami Knife Guy ecosystem, with a primary emphasis on B2B trust, recurring commercial accounts, authority-building, and white-label readiness.
+Stabilize the platform into operational infrastructure for the full Miami Knife Guy ecosystem, with a primary emphasis on B2B trust, recurring commercial accounts, authority-building, white-label readiness, and long-term quality/training system maturity.
 
 ---
 
@@ -41,26 +41,7 @@ MKG is not only a knife sharpening service. The platform must support a connecte
 - Sharpening tower upgrades for Perfect Edge systems
 - Future user app with camera/AR education, knife assessment, knife selection guidance, user content, offers, and merch incentives
 - Future white-labeled CRM, growth engine, marketing materials, and invoicing for sharpeners
-
-### SharpBot Venture Context
-SharpBot should be treated as a separate national-scale retail automation venture that can benefit from MKG proof, data, content, and operational credibility, but should not be architecturally collapsed into the local MKG Growth Engine.
-
-SharpBot concept:
-- Fully autonomous AI-driven robotic sharpening kiosk
-- Sub-millimeter precision sharpening target
-- Multi-sensor suite including 8K video, ultrasonic hardness testing, pressure sensors, accelerometers, and additional instrumentation
-- Automated retail placement in grocery stores, Costco-style big-box environments, and other high-frequency shopping locations
-- Customer workflow: drop off knives, shop, receive automated completion message, pay digitally, retrieve knives from automated locker system
-- Live video feed of sharpening process
-- Integrated UGC and customer proof display
-- National deployment target: minimum 5,000 kiosks concentrated in and around metropolitan centers
-
-Growth Engine relevance:
-- Capture early market proof for consumer demand
-- Track objection data around automated sharpening trust
-- Track knife condition / service outcome datasets where legally and ethically available
-- Build authority content that de-risks robotic sharpening perception
-- Preserve future integration paths for customer identity, offers, loyalty, reviews, and UGC
+- Internal quality, technician training, and workflow standardization systems
 
 ---
 
@@ -122,7 +103,7 @@ Track:
 - channel: youtube | instagram | facebook | blog | ebook | podcast | press | short_form
 - audience: chefs | home_cooks | restaurants | hotels | yacht_clubs | sharpeners | members | investors | retail_partners
 - stage: idea | scripted | filmed | edited | scheduled | published | repurposed
-- authorityGoal: education | trust | proof | offer | founder_story | technical_expertise | automation_trust | investor_credibility
+- authorityGoal: education | trust | proof | offer | founder_story | technical_expertise | investor_credibility
 - linkedOffer
 - publishDate
 - metrics
@@ -144,7 +125,6 @@ Track:
 - podcast_appearance
 - youtube_feature
 - technical_demo
-- automation_trust_asset
 
 ### 5. Analytics Optimization
 Move heavy dashboard calculations to:
@@ -155,7 +135,19 @@ analytics/commercialPipeline
 analytics/topAmbassadors
 analytics/contentPerformance
 analytics/reputationGrowth
+analytics/trainingPerformance
 ```
+
+### 6. Internal Training System
+Build systems that reduce technician learning curves and standardize sharpening quality.
+
+Potential future tools:
+- Haptic feedback systems
+- Visual feedback systems
+- SOP enforcement
+- Quality scoring
+- Training progress dashboards
+- Skill progression metrics
 
 ---
 
@@ -178,7 +170,7 @@ Create Firebase Functions for:
 
 ## Ecosystem Defensive Moat
 
-The defensibility target is not only local sharpening volume. It is the combination of:
+The defensibility target is the combination of:
 
 1. Recurring B2B accounts
 2. Chef trust network
@@ -188,9 +180,9 @@ The defensibility target is not only local sharpening volume. It is the combinat
 6. VIP membership retention
 7. Proprietary CRM/workflow data
 8. Technical sharpening-system upgrades
-9. Future AR/user app engagement
-10. Future white-label growth engine for sharpeners
-11. SharpBot national robotic kiosk venture, kept strategically distinct from MKG while supported by MKG proof and trust assets
+9. User app engagement
+10. White-label growth engine for sharpeners
+11. Internal training and quality-standardization systems
 
 ---
 
@@ -227,15 +219,13 @@ The defensibility target is not only local sharpening volume. It is the combinat
 - Feature requests from other sharpeners
 - Operational workflows mature enough to package
 
-### SharpBot Readiness
-- Retail partner conversations
-- Consumer trust objections
-- Automation trust content performance
-- Technical demo proof assets
-- Kiosk workflow validation
-- Locker/payment/message workflow assumptions
-- Sensor and QA data strategy
-- Safety and liability requirements
+### Training / Quality
+- Technician speed-to-competency
+- Quality consistency by technician
+- Rework rate
+- SOP compliance
+- Training completion speed
+- Quality score trendlines
 
 ---
 
@@ -246,7 +236,12 @@ Transition from:
 Into:
 ### B2B-First Knife Care Authority + Local Trust Brand + Sharpening Growth OS
 
-While preserving a separate path for:
-### SharpBot — National Autonomous Robotic Knife-Sharpening Retail Infrastructure
+Near-term priority:
+- Proof
+- Recurring commercial revenue
+- Brand authority
+- Operational repeatability
+- Quality standardization
+- Data maturity
 
-Franchising is not a near-term focus. The near-term priority is proof, recurring commercial revenue, brand authority, and operational repeatability. Future scalability should preserve room for SharpBot as a separate venture and for white-labeled CRM/growth-engine opportunities.
+Franchising is not a near-term focus. Immediate focus is infrastructure, trust, and repeatable operational excellence.
