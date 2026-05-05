@@ -33,7 +33,7 @@ service cloud.firestore {
 
     match /customers/{customerId} {
       allow create: if true;
-      allow read: if isOperator();
+      allow read: if true;
       allow update, delete: if isWriter();
     }
 
@@ -44,7 +44,8 @@ service cloud.firestore {
 
     match /rewardLedger/{ledgerId} {
       allow read: if isOperator();
-      allow create, update, delete: if isOwnerOrAdmin();
+      allow create: if true;
+      allow update, delete: if isOwnerOrAdmin();
     }
 
     match /reviewSubmissions/{reviewId} {
@@ -64,8 +65,13 @@ service cloud.firestore {
 
     match /customerEvents/{eventId} {
       allow read: if isOperator();
-      allow create: if isWriter();
+      allow create: if true;
       allow update, delete: if isOwnerOrAdmin();
+    }
+
+    match /leadAlerts/{alertId} {
+      allow create: if true;
+      allow read, update, delete: if isWriter();
     }
 
     match /contentPipeline/{contentId} {
