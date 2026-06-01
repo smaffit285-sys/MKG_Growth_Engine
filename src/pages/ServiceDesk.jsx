@@ -18,9 +18,11 @@ import {
 } from '../lib/schema'
 import {
   calculateServiceTotals,
+  calculateLineItemTotal,
   contactDisplayName,
   customerDisplayName,
   emptyServiceItem,
+  formatLineItemRate,
   serviceItemFromPreset,
   SERVICE_ITEM_PRESETS,
 } from '../lib/serviceMath'
@@ -450,8 +452,8 @@ export default function ServiceDesk() {
                 <input value={item.description} onChange={e => updateItem(index, 'description', e.target.value)} className="field w-full" />
                 <div className="grid grid-cols-3 gap-2">
                   <Field label="Qty / Inches"><input type="number" value={item.qty} onChange={e => updateItem(index, 'qty', e.target.value)} className="field" /></Field>
-                  <Field label="Rate"><input type="number" value={item.unitPrice} onChange={e => updateItem(index, 'unitPrice', e.target.value)} className="field" /></Field>
-                  <Field label="Line Total"><div className="field bg-zinc-900 text-right">{currency(Number(item.qty || 0) * Number(item.unitPrice || 0))}</div></Field>
+                  <Field label="Rate"><input type="number" value={item.unitPrice} onChange={e => updateItem(index, 'unitPrice', e.target.value)} className="field" disabled={item.priceMode === 'knife_count'} /></Field>
+                  <Field label="Line Total"><div className="field text-right">{currency(calculateLineItemTotal(item))}</div></Field>
                 </div>
               </div>
             ))}
@@ -525,8 +527,8 @@ function InvoiceSummary({ customer, serviceForm, totals, reviewHref }) {
           <div key={index} className="grid grid-cols-12 gap-2 p-2 border-b last:border-b-0">
             <div className="col-span-6">{item.description || 'Service'}</div>
             <div className="col-span-2 text-right">{item.qty}</div>
-            <div className="col-span-2 text-right">{currency(item.unitPrice)}</div>
-            <div className="col-span-2 text-right">{currency(Number(item.qty || 0) * Number(item.unitPrice || 0))}</div>
+            <div className="col-span-2 text-right">{formatLineItemRate(item)}</div>
+            <div className="col-span-2 text-right">{currency(calculateLineItemTotal(item))}</div>
           </div>
         ))}
       </div>
