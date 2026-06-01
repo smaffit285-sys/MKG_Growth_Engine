@@ -2,8 +2,10 @@ import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp } from 
 import { useEffect, useMemo, useState } from 'react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { db } from '../lib/firebase'
+import { MKG_BRAND } from '../lib/brand'
 import {
   COLLECTIONS,
+  DISCOUNT_TYPES,
   INVOICE_STATUS,
   INVOICE_TYPES,
   LINE_ITEM_TYPES,
@@ -46,7 +48,9 @@ export default function Invoices() {
   const [dueDate, setDueDate] = useState('')
   const [notes, setNotes] = useState('')
   const [taxRate, setTaxRate] = useState(0)
+  const [discountType, setDiscountType] = useState(DISCOUNT_TYPES.FLAT)
   const [discountAmount, setDiscountAmount] = useState(0)
+  const [roundDown, setRoundDown] = useState(false)
   const [primaryPaymentMethod, setPrimaryPaymentMethod] = useState(PAYMENT_METHODS.STRIPE)
   const [paymentOptions, setPaymentOptions] = useState(DEFAULT_PAYMENT_OPTIONS)
   const [amountPaid, setAmountPaid] = useState(0)
@@ -65,13 +69,15 @@ export default function Invoices() {
 
   const totals = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + (Number(item.qty || 0) * Number(item.unitPrice || 0)), 0)
-    const discount = Math.min(Number(discountAmount || 0), subtotal)
+    const requestedDiscount = discountType === DISCOUNT_TYPES.PERCENT ? subtotal * (Number(discountAmount || 0) / 100) : Number(discountAmount || 0)
+    const discount = Math.min(Math.max(requestedDiscount, 0), subtotal)
     const taxable = Math.max(subtotal - discount, 0)
     const tax = taxable * (Number(taxRate || 0) / 100)
-    const total = taxable + tax
+    const adjustedTotal = taxable + tax
+    const total = roundDown ? Math.floor(adjustedTotal) : adjustedTotal
     const balanceDue = Math.max(total - Number(amountPaid || 0), 0)
-    return { subtotal, discount, taxable, tax, total, balanceDue }
-  }, [items, taxRate, discountAmount, amountPaid])
+    return { subtotal, discount, taxable, tax, adjustedTotal, total, balanceDue }
+  }, [items, taxRate, discountType, discountAmount, roundDown, amountPaid])
 
   const enabledPaymentOptions = useMemo(() => Object.entries(paymentOptions).filter(([, option]) => option.enabled), [paymentOptions])
   const qrValue = paymentOptions[primaryPaymentMethod]?.value || invoiceTextFallback()
@@ -119,7 +125,9 @@ export default function Invoices() {
     setDueDate(inv.dueDate || '')
     setNotes(inv.notes || '')
     setTaxRate(inv.taxRate || 0)
+    setDiscountType(inv.discountType || DISCOUNT_TYPES.FLAT)
     setDiscountAmount(inv.discountAmount || 0)
+    setRoundDown(Boolean(inv.roundDown))
     setPrimaryPaymentMethod(inv.primaryPaymentMethod || PAYMENT_METHODS.STRIPE)
     setPaymentOptions(inv.paymentOptions || DEFAULT_PAYMENT_OPTIONS)
     setAmountPaid(0)
@@ -142,7 +150,9 @@ export default function Invoices() {
       notes,
       items,
       subtotal: totals.subtotal,
+      discountType,
       discountAmount: totals.discount,
+      roundDown,
       taxRate: Number(taxRate || 0),
       taxAmount: totals.tax,
       total: totals.total,
@@ -211,11 +221,13 @@ export default function Invoices() {
 
           <section className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
             <h2 className="text-orange-400 font-semibold">Totals, Terms & Signature</h2>
-            <div className="grid grid-cols-3 gap-3">
-              <Field label="Discount $"><input type="number" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} className="field" /></Field>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Field label="Discount Type"><select value={discountType} onChange={e => setDiscountType(e.target.value)} className="field"><option value={DISCOUNT_TYPES.FLAT}>Flat dollars</option><option value={DISCOUNT_TYPES.PERCENT}>Percent</option></select></Field>
+              <Field label="Discount"><input type="number" value={discountAmount} onChange={e => setDiscountAmount(e.target.value)} className="field" /></Field>
               <Field label="Tax %"><input type="number" value={taxRate} onChange={e => setTaxRate(e.target.value)} className="field" /></Field>
               <Field label="Amount Paid"><input type="number" value={amountPaid} onChange={e => setAmountPaid(e.target.value)} className="field" /></Field>
             </div>
+            <label className="flex items-center gap-2 text-sm text-zinc-300"><input type="checkbox" checked={roundDown} onChange={e => setRoundDown(e.target.checked)} />Round down total to nearest dollar</label>
             <div className="grid grid-cols-2 gap-3"><label className="flex items-center gap-2 text-sm text-zinc-300"><input type="checkbox" checked={recurring} onChange={e => setRecurring(e.target.checked)} />Recurring</label><Field label="Cadence"><select value={recurringCadence} onChange={e => setRecurringCadence(e.target.value)} className="field"><option>weekly</option><option>biweekly</option><option>monthly</option><option>quarterly</option></select></Field></div>
             <Field label="Accepted By / Signature Name"><input value={signatureName} onChange={e => setSignatureName(e.target.value)} className="field" /></Field>
             <Field label="Notes"><textarea value={notes} onChange={e => setNotes(e.target.value)} className="field min-h-24" /></Field>
@@ -261,6 +273,6 @@ function Field({ label, children }) { return <label className="block"><span clas
 function TemplateButton({ label, onClick }) { return <button type="button" onClick={onClick} className="bg-zinc-800 hover:bg-zinc-700 rounded-xl px-3 py-2 text-sm text-white">{label}</button> }
 
 function InvoicePreview({ invoiceType, customerName, businessName, customerPhone, customerEmail, dueDate, items, totals, notes, status, paymentStatus, paymentOptions, primaryPaymentMethod, recurring, recurringCadence, signatureName, qrValue }) {
-  return <div className="print-area bg-white text-zinc-950 rounded-2xl p-5 h-fit sticky top-4"><div className="flex justify-between gap-4 border-b pb-4"><div><h2 className="text-2xl font-black tracking-tight">MIAMI KNIFE GUY</h2><p className="text-sm text-zinc-600">Premium Knife Care • Commercial Sharpening • Workshops</p></div><div className="text-right"><p className="text-xs uppercase text-zinc-500">Invoice</p><p className="font-bold">{status}</p><p className="text-xs text-zinc-600">Payment: {paymentStatus}</p></div></div><div className="grid grid-cols-2 gap-4 py-4 text-sm"><div><p className="text-zinc-500">Bill To</p><p className="font-semibold">{invoiceType === INVOICE_TYPES.B2B ? businessName || 'Business Name' : customerName || 'Customer Name'}</p>{invoiceType === INVOICE_TYPES.B2B && <p>{customerName}</p>}<p>{customerPhone}</p><p>{customerEmail}</p></div><div className="text-right"><p className="text-zinc-500">Due Date</p><p>{dueDate || 'Upon receipt'}</p>{recurring && <p className="mt-2 text-zinc-600">Recurring: {recurringCadence}</p>}</div></div><div className="border rounded-xl overflow-hidden text-sm"><div className="grid grid-cols-12 bg-zinc-100 font-semibold p-2"><div className="col-span-6">Item</div><div className="col-span-2 text-right">Qty</div><div className="col-span-2 text-right">Rate</div><div className="col-span-2 text-right">Total</div></div>{items.map((item, i) => <div key={i} className="grid grid-cols-12 p-2 border-t"><div className="col-span-6">{item.description || 'Service'}</div><div className="col-span-2 text-right">{item.qty}</div><div className="col-span-2 text-right">${Number(item.unitPrice || 0).toFixed(2)}</div><div className="col-span-2 text-right">${(Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2)}</div></div>)}</div><div className="mt-4 ml-auto max-w-xs space-y-1 text-sm"><Row label="Subtotal" value={totals.subtotal} /><Row label="Discount" value={-totals.discount} /><Row label="Tax" value={totals.tax} /><Row label="Paid" value={-Number(totals.total - totals.balanceDue || 0)} /><div className="flex justify-between border-t pt-2 text-lg font-black"><span>Balance Due</span><span>${totals.balanceDue.toFixed(2)}</span></div></div>{paymentOptions.length > 0 && <div className="mt-4 p-3 bg-zinc-100 rounded-xl text-sm"><p className="font-semibold">Payment Options</p><div className="space-y-2 mt-2">{paymentOptions.map(([method, option]) => <div key={method} className={method === primaryPaymentMethod ? 'border-l-4 border-orange-500 pl-2' : ''}><p className="font-semibold">{option.label}{method === primaryPaymentMethod ? ' — Preferred' : ''}</p>{option.value && <p className="break-all">{option.value}</p>}<p className="text-zinc-600">{option.instructions}</p></div>)}</div><div className="mt-4 flex justify-center"><QRCodeCanvas value={qrValue || 'Miami Knife Guy'} size={132} /></div><p className="text-center text-xs text-zinc-500 mt-2">Scan for preferred payment details</p></div>}{notes && <div className="mt-4 text-sm"><p className="font-semibold">Notes</p><p className="text-zinc-600 whitespace-pre-wrap">{notes}</p></div>}<div className="mt-8 border-t pt-4 text-sm"><p className="text-zinc-500">Accepted By</p><p className="font-semibold min-h-6">{signatureName || '____________________________'}</p></div></div>
+  return <div className="print-area bg-white text-zinc-950 rounded-2xl p-5 h-fit sticky top-4"><div className="flex justify-between gap-4 border-b pb-4"><div><h2 className="text-2xl font-black tracking-tight uppercase">{MKG_BRAND.businessName}</h2><p className="text-sm text-zinc-600">{MKG_BRAND.tagline}</p><p className="text-xs text-zinc-600">{MKG_BRAND.phoneDisplay} | {MKG_BRAND.website} | {MKG_BRAND.email}</p></div><div className="text-right"><p className="text-xs uppercase text-zinc-500">Invoice</p><p className="font-bold">{status}</p><p className="text-xs text-zinc-600">Payment: {paymentStatus}</p></div></div><div className="grid grid-cols-2 gap-4 py-4 text-sm"><div><p className="text-zinc-500">Bill To</p><p className="font-semibold">{invoiceType === INVOICE_TYPES.B2B ? businessName || 'Business Name' : customerName || 'Customer Name'}</p>{invoiceType === INVOICE_TYPES.B2B && <p>{customerName}</p>}<p>{customerPhone}</p><p>{customerEmail}</p></div><div className="text-right"><p className="text-zinc-500">Due Date</p><p>{dueDate || 'Upon receipt'}</p>{recurring && <p className="mt-2 text-zinc-600">Recurring: {recurringCadence}</p>}</div></div><div className="border rounded-xl overflow-hidden text-sm"><div className="grid grid-cols-12 bg-zinc-100 font-semibold p-2"><div className="col-span-6">Item</div><div className="col-span-2 text-right">Qty</div><div className="col-span-2 text-right">Rate</div><div className="col-span-2 text-right">Total</div></div>{items.map((item, i) => <div key={i} className="grid grid-cols-12 p-2 border-t"><div className="col-span-6">{item.description || 'Service'}</div><div className="col-span-2 text-right">{item.qty}</div><div className="col-span-2 text-right">${Number(item.unitPrice || 0).toFixed(2)}</div><div className="col-span-2 text-right">${(Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2)}</div></div>)}</div><div className="mt-4 ml-auto max-w-xs space-y-1 text-sm"><Row label="Subtotal" value={totals.subtotal} /><Row label="Discount" value={-totals.discount} /><Row label="Tax" value={totals.tax} /><Row label="Paid" value={-Number(totals.total - totals.balanceDue || 0)} /><div className="flex justify-between border-t pt-2 text-lg font-black"><span>Balance Due</span><span>${totals.balanceDue.toFixed(2)}</span></div></div>{paymentOptions.length > 0 && <div className="mt-4 p-3 bg-zinc-100 rounded-xl text-sm"><p className="font-semibold">Payment Options</p><div className="space-y-2 mt-2">{paymentOptions.map(([method, option]) => <div key={method} className={method === primaryPaymentMethod ? 'border-l-4 border-orange-500 pl-2' : ''}><p className="font-semibold">{option.label}{method === primaryPaymentMethod ? ' — Preferred' : ''}</p>{option.value && <p className="break-all">{option.value}</p>}<p className="text-zinc-600">{option.instructions}</p></div>)}</div><div className="mt-4 flex justify-center"><QRCodeCanvas value={qrValue || MKG_BRAND.businessName} size={132} /></div><p className="text-center text-xs text-zinc-500 mt-2">Scan for preferred payment details</p></div>}{notes && <div className="mt-4 text-sm"><p className="font-semibold">Notes</p><p className="text-zinc-600 whitespace-pre-wrap">{notes}</p></div>}<div className="mt-4 p-3 bg-zinc-100 rounded-xl text-sm"><p className="font-semibold">Review Request</p><p className="text-zinc-700">{MKG_BRAND.reviewRequest}</p></div><div className="mt-8 border-t pt-4 text-sm"><p className="text-zinc-500">Accepted By</p><p className="font-semibold min-h-6">{signatureName || '____________________________'}</p></div></div>
 }
 function Row({ label, value }) { return <div className="flex justify-between"><span>{label}</span><span>${Number(value || 0).toFixed(2)}</span></div> }

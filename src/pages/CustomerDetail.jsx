@@ -1,35 +1,41 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { db } from '../lib/firebase'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import {
+  collection,
   doc,
   getDoc,
-  updateDoc,
-  serverTimestamp,
-  collection,
-  query,
-  where,
   onSnapshot,
   orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
 } from 'firebase/firestore'
-import { QRCodeSVG } from 'qrcode.react'
+import { db } from '../lib/firebase'
+import { COLLECTIONS } from '../lib/schema'
+import { contactDisplayName, customerDisplayName } from '../lib/serviceMath'
 
-const TABS = ['Overview', 'Referrals', 'Rewards', 'Appointments']
-
-const TIER_COLORS = {
-  standard: 'bg-gray-700 text-gray-300',
-  silver: 'bg-gray-400 text-gray-900',
-  gold: 'bg-yellow-500 text-yellow-900',
-  platinum: 'bg-purple-500 text-purple-100',
-}
+const TABS = ['Overview', 'Services', 'Invoices', 'Referrals', 'Rewards']
 
 const STATUS_COLORS = {
+  unpaid: 'bg-red-500/20 text-red-300 border-red-500/30',
+  partial: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+  paid: 'bg-green-500/20 text-green-300 border-green-500/30',
   pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  activated: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
   completed: 'bg-green-500/20 text-green-400 border-green-500/30',
-  flagged: 'bg-red-500/20 text-red-400 border-red-500/30',
   issued: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
   redeemed: 'bg-green-500/20 text-green-400 border-green-500/30',
+}
+
+function currency(value) {
+  return `$${Number(value || 0).toFixed(2)}`
+}
+
+function dateLabel(value) {
+  if (!value) return '-'
+  const date = value.toDate ? value.toDate() : new Date(value)
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString()
 }
 
 export default function CustomerDetail() {
@@ -41,21 +47,33 @@ export default function CustomerDetail() {
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({})
   const [saving, setSaving] = useState(false)
+  const [services, setServices] = useState([])
+  const [invoices, setInvoices] = useState([])
   const [referrals, setReferrals] = useState([])
-  const [referredCustomers, setReferredCustomers] = useState({})
   const [rewardLedger, setRewardLedger] = useState([])
 
   useEffect(() => {
     async function loadCustomer() {
       try {
-        const snap = await getDoc(doc(db, 'customers', id))
+        const snap = await getDoc(doc(db, COLLECTIONS.CUSTOMERS, id))
         if (snap.exists()) {
           const data = { id: snap.id, ...snap.data() }
           setCustomer(data)
-          setEditForm({ firstName: data.firstName, lastName: data.lastName, email: data.email, address: data.address })
+          setEditForm({
+            businessName: data.businessName || '',
+            contactName: data.contactName || contactDisplayName(data),
+            firstName: data.firstName || '',
+            lastName: data.lastName || '',
+            phone: data.phone || '',
+            email: data.email || '',
+            address: data.address || '',
+            preferredPricing: data.preferredPricing || '',
+            reviewStatus: data.reviewStatus || 'not_requested',
+            referralSource: data.referralSource || data.leadSource || '',
+            nextFollowUpDate: data.nextFollowUpDate || '',
+            notes: data.notes || '',
+          })
         }
-      } catch (e) {
-        console.error(e)
       } finally {
         setLoading(false)
       }
@@ -64,224 +82,249 @@ export default function CustomerDetail() {
   }, [id])
 
   useEffect(() => {
-    const refQ = query(
-      collection(db, 'referrals'),
-      where('referringCustomerId', '==', id),
-      orderBy('createdAt', 'desc')
-    )
-    const unsub = onSnapshot(refQ, async (snap) => {
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      setReferrals(docs)
-      const custMap = {}
-      await Promise.all(docs.map(async r => {
-        if (r.referredCustomerId) {
-          const d = await getDoc(doc(db, 'customers', r.referredCustomerId))
-          if (d.exists()) custMap[r.referredCustomerId] = d.data()
-        }
-      }))
-      setReferredCustomers(custMap)
-    })
-    return unsub
+    const q = query(collection(db, COLLECTIONS.SERVICE_RECORDS), orderBy('createdAt', 'desc'))
+    return onSnapshot(q, snap => setServices(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(service => service.customerId === id)))
   }, [id])
 
   useEffect(() => {
-    const ledgerQ = query(
-      collection(db, 'rewardLedger'),
-      where('customerId', '==', id),
-      orderBy('createdAt', 'desc')
-    )
-    const unsub = onSnapshot(ledgerQ, (snap) => {
-      setRewardLedger(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    })
-    return unsub
+    const q = query(collection(db, COLLECTIONS.INVOICES), orderBy('createdAt', 'desc'))
+    return onSnapshot(q, snap => setInvoices(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(invoice => invoice.customerId === id)))
   }, [id])
 
-  const handleSave = async () => {
+  useEffect(() => {
+    const q = query(collection(db, 'referrals'), where('referringCustomerId', '==', id), orderBy('createdAt', 'desc'))
+    return onSnapshot(q, snap => setReferrals(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+  }, [id])
+
+  useEffect(() => {
+    const q = query(collection(db, 'rewardLedger'), where('customerId', '==', id), orderBy('createdAt', 'desc'))
+    return onSnapshot(q, snap => setRewardLedger(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+  }, [id])
+
+  const stats = useMemo(() => {
+    return {
+      visits: services.length,
+      lifetimeValue: services.reduce((sum, service) => sum + Number(service.total || 0), 0),
+      unpaid: invoices.filter(invoice => !['paid', 'void'].includes(invoice.paymentStatus || invoice.status)).reduce((sum, invoice) => sum + Number(invoice.balanceDue || 0), 0),
+      lastService: services[0],
+    }
+  }, [services, invoices])
+
+  async function handleSave() {
     setSaving(true)
     try {
-      await updateDoc(doc(db, 'customers', id), {
-        firstName: editForm.firstName,
-        lastName: editForm.lastName,
-        email: editForm.email,
-        address: editForm.address,
+      await updateDoc(doc(db, COLLECTIONS.CUSTOMERS, id), {
+        ...editForm,
         lastActivity: serverTimestamp(),
       })
-      setCustomer(c => ({ ...c, ...editForm }))
+      setCustomer(prev => ({ ...prev, ...editForm }))
       setEditing(false)
-    } catch (e) {
-      console.error(e)
     } finally {
       setSaving(false)
     }
   }
 
   if (loading) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-800 rounded w-48" />
-          <div className="h-48 bg-gray-800 rounded-xl" />
-        </div>
-      </div>
-    )
+    return <div className="p-6"><div className="h-48 bg-zinc-900 rounded-2xl animate-pulse" /></div>
   }
 
   if (!customer) {
     return (
       <div className="p-6 text-center">
-        <p className="text-gray-400">Customer not found.</p>
+        <p className="text-zinc-400">Customer not found.</p>
         <button onClick={() => navigate('/customers')} className="mt-4 text-orange-500 hover:underline">Back to Customers</button>
       </div>
     )
   }
 
-  const referralUrl = `https://miamiknifeguy.com/r/${customer.referralCode}`
+  const referralUrl = `https://miamiknifeguy.com/r/${customer.referralCode || ''}`
+  const reviewUrl = customer.referralCode ? `/review?code=${customer.referralCode}` : '/review'
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <button onClick={() => navigate('/customers')} className="text-gray-400 hover:text-white mb-4 flex items-center gap-1 text-sm">
-        Back to Customers
-      </button>
-      <div className="bg-gray-900 rounded-2xl p-6 mb-6">
-        <div className="flex items-start justify-between mb-4">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-5">
+      <button onClick={() => navigate('/customers')} className="text-zinc-400 hover:text-white flex items-center gap-1 text-sm">Back to Customers</button>
+
+      <section className="bg-zinc-900 rounded-2xl border border-zinc-800 p-5">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">{customer.firstName} {customer.lastName}</h1>
-            <p className="text-gray-400">{customer.phone}</p>
-            <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold capitalize ${TIER_COLORS[customer.membershipTier] || TIER_COLORS.standard}`}>
-              {customer.membershipTier}
-            </span>
+            <h1 className="text-2xl font-bold text-white">{customerDisplayName(customer)}</h1>
+            <p className="text-zinc-400">{contactDisplayName(customer) || 'No contact'} {customer.phone ? `| ${customer.phone}` : ''}</p>
+            <p className="text-zinc-500 text-sm">{customer.address || customer.email || 'No location saved'}</p>
           </div>
-          <div className="text-right">
-            <p className="text-gray-400 text-sm">Rewards Balance</p>
-            <p className="text-orange-500 text-3xl font-bold">${customer.rewardsBalance || 0}</p>
+          <div className="grid grid-cols-2 sm:flex gap-2">
+            <button onClick={() => navigate(`/field?customer=${id}`)} className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-4 py-2 text-sm">New Service</button>
+            <a href={reviewUrl} className="bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl px-4 py-2 text-sm text-center">Review Link</a>
+            {customer.phone && <a href={`sms:${customer.phone}`} className="bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl px-4 py-2 text-sm text-center">Text</a>}
           </div>
         </div>
-        <div className="flex gap-6 items-center">
-          <div>
-            <QRCodeSVG value={referralUrl} size={120} bgColor="#111827" fgColor="#f97316" />
-            <p className="text-gray-500 text-xs mt-1 break-all max-w-xs">{referralUrl}</p>
-          </div>
-          <div className="space-y-2 text-sm">
-            <p><span className="text-gray-400">Code:</span> <span className="text-orange-400 font-bold">{customer.referralCode}</span></p>
-            <p><span className="text-gray-400">Total Referrals:</span> <span className="text-white">{customer.totalReferrals || 0}</span></p>
-            <p><span className="text-gray-400">Completed:</span> <span className="text-white">{customer.completedReferrals || 0}</span></p>
-            <p><span className="text-gray-400">Member Since:</span> <span className="text-white">{customer.createdAt?.toDate ? customer.createdAt.toDate().toLocaleDateString() : '—'}</span></p>
-          </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+          <Stat label="Service Visits" value={stats.visits} />
+          <Stat label="Lifetime Value" value={currency(stats.lifetimeValue)} />
+          <Stat label="Balance Due" value={currency(stats.unpaid)} tone={stats.unpaid > 0 ? 'text-yellow-300' : 'text-green-300'} />
+          <Stat label="Next Follow-Up" value={customer.nextFollowUpDate || '-'} />
         </div>
-      </div>
-      <div className="flex gap-1 mb-6 bg-gray-900 p-1 rounded-xl">
+      </section>
+
+      <div className="flex gap-1 bg-zinc-900 p-1 rounded-xl overflow-x-auto">
         {TABS.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
-              activeTab === tab ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-white'
-            }`}
+            className={`min-w-24 flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === tab ? 'bg-orange-500 text-white' : 'text-zinc-400 hover:text-white'}`}
           >
             {tab}
           </button>
         ))}
       </div>
+
       {activeTab === 'Overview' && (
-        <div className="bg-gray-900 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Customer Info</h2>
+        <section className="bg-zinc-900 rounded-2xl border border-zinc-800 p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">Customer Record</h2>
             {!editing ? (
               <button onClick={() => setEditing(true)} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded-lg">Edit</button>
             ) : (
               <div className="flex gap-2">
-                <button onClick={() => setEditing(false)} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg">Cancel</button>
+                <button onClick={() => setEditing(false)} className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white text-sm rounded-lg">Cancel</button>
                 <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-900 text-white text-sm rounded-lg">{saving ? 'Saving...' : 'Save'}</button>
               </div>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
-              ['First Name', 'firstName'],
-              ['Last Name', 'lastName'],
+              ['Business / Restaurant', 'businessName'],
+              ['Contact Name', 'contactName'],
+              ['Phone', 'phone'],
               ['Email', 'email'],
-              ['Address', 'address'],
+              ['Address / Location', 'address'],
+              ['Preferred Pricing', 'preferredPricing'],
+              ['Review Status', 'reviewStatus'],
+              ['Referral Source', 'referralSource'],
+              ['Next Follow-Up', 'nextFollowUpDate'],
             ].map(([label, field]) => (
               <div key={field}>
-                <p className="text-gray-400 text-sm mb-1">{label}</p>
+                <p className="text-zinc-400 text-sm mb-1">{label}</p>
                 {editing ? (
-                  <input
-                    value={editForm[field] || ''}
-                    onChange={e => setEditForm(f => ({ ...f, [field]: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500"
-                  />
+                  <input value={editForm[field] || ''} onChange={e => setEditForm(prev => ({ ...prev, [field]: e.target.value }))} className="field" />
                 ) : (
-                  <p className="text-white">{customer[field] || '—'}</p>
+                  <p className="text-white">{customer[field] || '-'}</p>
                 )}
               </div>
             ))}
+          </div>
+
+          <div>
+            <p className="text-zinc-400 text-sm mb-1">Notes</p>
+            {editing ? (
+              <textarea value={editForm.notes || ''} onChange={e => setEditForm(prev => ({ ...prev, notes: e.target.value }))} className="field min-h-24" />
+            ) : (
+              <p className="text-white whitespace-pre-wrap">{customer.notes || '-'}</p>
+            )}
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'Services' && <ServiceList services={services} navigate={navigate} customerId={id} />}
+      {activeTab === 'Invoices' && <InvoiceList invoices={invoices} />}
+      {activeTab === 'Referrals' && <SimpleList title={`Referrals (${referrals.length})`} items={referrals} empty="No referrals yet." />}
+      {activeTab === 'Rewards' && (
+        <section className="bg-zinc-900 rounded-2xl border border-zinc-800 p-5 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center gap-6">
             <div>
-              <p className="text-gray-400 text-sm mb-1">Phone</p>
-              <p className="text-white">{customer.phone}</p>
+              <QRCodeSVG value={referralUrl} size={128} bgColor="#18181b" fgColor="#f97316" />
+              <p className="text-zinc-500 text-xs mt-2 break-all">{referralUrl}</p>
             </div>
-            <div>
-              <p className="text-gray-400 text-sm mb-1">Free Sharpening Redeemed</p>
-              <p className="text-white">{customer.freeSharpeningRedeemed ? 'Yes' : 'No'}</p>
+            <div className="space-y-2 text-sm">
+              <p><span className="text-zinc-400">Code:</span> <span className="text-orange-400 font-bold">{customer.referralCode || '-'}</span></p>
+              <p><span className="text-zinc-400">Rewards:</span> <span className="text-white">${customer.rewardsBalance || 0}</span></p>
+              <p><span className="text-zinc-400">Completed referrals:</span> <span className="text-white">{customer.completedReferrals || 0}</span></p>
             </div>
           </div>
-        </div>
-      )}
-      {activeTab === 'Referrals' && (
-        <div className="bg-gray-900 rounded-2xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Referrals ({referrals.length})</h2>
-          {referrals.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No referrals yet</p>
-          ) : (
-            <div className="space-y-3">
-              {referrals.map(r => {
-                const ref = referredCustomers[r.referredCustomerId]
-                return (
-                  <div key={r.id} className="bg-gray-800 rounded-xl p-4 flex items-center justify-between">
-                    <div>
-                      <p className="text-white font-medium">{ref ? ref.firstName + ' ' + ref.lastName : 'Unknown'}</p>
-                      <p className="text-gray-400 text-sm">{r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString() : '—'}</p>
-                    </div>
-                    <span className={`px-2 py-1 rounded-full text-xs border ${STATUS_COLORS[r.status] || STATUS_COLORS.pending}`}>
-                      {r.status || 'pending'}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
-      {activeTab === 'Rewards' && (
-        <div className="bg-gray-900 rounded-2xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Reward History ({rewardLedger.length})</h2>
-          {rewardLedger.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No reward activity yet</p>
-          ) : (
-            <div className="space-y-3">
-              {rewardLedger.map(entry => (
-                <div key={entry.id} className="bg-gray-800 rounded-xl p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-white font-medium capitalize">{entry.type?.replace(/_/g, ' ')}</p>
-                    <p className="text-gray-400 text-sm">{entry.createdAt?.toDate ? entry.createdAt.toDate().toLocaleDateString() : '—'}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-orange-400 font-bold">${entry.amount || 0}</span>
-                    <span className={`px-2 py-1 rounded-full text-xs border ${STATUS_COLORS[entry.status] || STATUS_COLORS.pending}`}>
-                      {entry.status || 'pending'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-      {activeTab === 'Appointments' && (
-        <div className="bg-gray-900 rounded-2xl p-6 text-center py-16">
-          <p className="text-gray-400 text-lg">Appointments</p>
-          <p className="text-gray-600 text-sm mt-2">Coming in Phase 4</p>
-        </div>
+          <SimpleList title={`Reward History (${rewardLedger.length})`} items={rewardLedger} empty="No reward activity yet." />
+        </section>
       )}
     </div>
   )
+}
+
+function Stat({ label, value, tone = 'text-orange-400' }) {
+  return (
+    <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3">
+      <p className="text-zinc-500 text-xs">{label}</p>
+      <p className={`text-lg font-bold ${tone}`}>{value}</p>
+    </div>
+  )
+}
+
+function ServiceList({ services, navigate, customerId }) {
+  return (
+    <section className="bg-zinc-900 rounded-2xl border border-zinc-800 p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-white">Service History</h2>
+        <button onClick={() => navigate(`/field?customer=${customerId}`)} className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-3 py-2 text-sm">New Service</button>
+      </div>
+      {services.length === 0 ? <p className="text-zinc-500 text-sm">No services yet.</p> : services.map(service => (
+        <div key={service.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div>
+              <p className="text-white font-medium">{dateLabel(service.serviceDate)} | {service.lineItems?.length || 0} line items</p>
+              <p className="text-zinc-500 text-sm">{service.serviceNotes || service.repairs || 'No service notes'}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge value={service.paymentStatus || 'unpaid'} />
+              <Badge value={service.reviewStatus || 'not_requested'} />
+              <span className="text-orange-400 font-bold">{currency(service.total)}</span>
+            </div>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <button onClick={() => navigate(`/field?customer=${customerId}`)} className="bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg px-3 py-1.5 text-xs">Create New</button>
+          </div>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function InvoiceList({ invoices }) {
+  return (
+    <section className="bg-zinc-900 rounded-2xl border border-zinc-800 p-5 space-y-3">
+      <h2 className="text-lg font-semibold text-white">Invoices</h2>
+      {invoices.length === 0 ? <p className="text-zinc-500 text-sm">No invoices yet.</p> : invoices.map(invoice => (
+        <div key={invoice.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <div>
+            <p className="text-white font-medium">{invoice.invoiceNumber || invoice.id}</p>
+            <p className="text-zinc-500 text-sm">{dateLabel(invoice.createdAt)} | Balance {currency(invoice.balanceDue)}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge value={invoice.paymentStatus || invoice.status || 'draft'} />
+            <span className="text-orange-400 font-bold">{currency(invoice.total)}</span>
+          </div>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function SimpleList({ title, items, empty }) {
+  return (
+    <section className="bg-zinc-900 rounded-2xl border border-zinc-800 p-5 space-y-3">
+      <h2 className="text-lg font-semibold text-white">{title}</h2>
+      {items.length === 0 ? <p className="text-zinc-500 text-sm">{empty}</p> : items.map(item => (
+        <div key={item.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 flex justify-between gap-3">
+          <div>
+            <p className="text-white font-medium">{item.type || item.status || item.id}</p>
+            <p className="text-zinc-500 text-sm">{dateLabel(item.createdAt)}</p>
+          </div>
+          <Badge value={item.status || 'pending'} />
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function Badge({ value }) {
+  const key = String(value || '').toLowerCase()
+  return <span className={`px-2 py-1 rounded-full text-xs border capitalize ${STATUS_COLORS[key] || 'bg-zinc-800 text-zinc-300 border-zinc-700'}`}>{String(value || '').replace(/_/g, ' ')}</span>
 }

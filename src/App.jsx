@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import ServiceDesk from './pages/ServiceDesk'
 import Customers from './pages/Customers'
 import CustomerDetail from './pages/CustomerDetail'
 import CommercialAccounts from './pages/CommercialAccounts'
@@ -39,6 +40,8 @@ export default function App() {
       <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
+      <Route path="/field" element={<ProtectedLayout><ServiceDesk /></ProtectedLayout>} />
+      <Route path="/services/new" element={<ProtectedLayout><ServiceDesk /></ProtectedLayout>} />
       <Route path="/customers" element={<ProtectedLayout><Customers /></ProtectedLayout>} />
       <Route path="/customer/:id" element={<ProtectedLayout><CustomerDetail /></ProtectedLayout>} />
       <Route path="/commercial" element={<ProtectedLayout><CommercialAccounts /></ProtectedLayout>} />
