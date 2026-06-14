@@ -22,5 +22,7 @@ Contact:
 - Contact actions use `hello@smws.work`. Make sure that email address exists or forwards correctly before sending traffic.
 
 Deploy notes:
-- For GitHub Pages, publish from the repo root and point DNS to GitHub Pages.
-- For Vercel, use a static/other project preset, no build command, and the repo root as the public output.
+- Vercel project slug: `smws-website`
+- Vercel account slug: `smaffit285-sys`
+- Static deployment: no build command, repo root output.
+- Last deployment-prep marker: 2026-06-14.
