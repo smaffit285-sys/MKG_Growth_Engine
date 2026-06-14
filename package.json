@@ -2,9 +2,5 @@
   "name": "smws-static-site",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "echo Static site ready"
-  },
   "description": "Static launch site for Sean Maffit Web Systems at smws.work"
 }
