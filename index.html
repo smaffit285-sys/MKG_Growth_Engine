@@ -3,36 +3,90 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SMWS — High-Trust Websites and Lead Systems</title>
-  <meta name="description" content="SMWS builds high-trust websites, landing pages, and lead systems for service businesses." />
-  <link rel="canonical" href="https://smws.work/" />
-  <meta property="og:title" content="SMWS — High-Trust Websites and Lead Systems" />
-  <meta property="og:description" content="SMWS builds high-trust websites, landing pages, and lead systems for service businesses." />
-  <meta property="og:url" content="https://smws.work/" />
-  <meta property="og:image" content="https://smws.work/assets/smws-logo.svg" />
+  <title>MKG Growth Engine — Inquiry Pipeline</title>
+  <meta name="description" content="Miami Knife Guy inquiry tracking, follow-up drafting, and customer retention dashboard." />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="nav">
-    <div class="wrap nav-inner">
-      <a class="brand" href="index.html" aria-label="SMWS home"><img src="assets/smws-logo.svg" alt="SMWS logo" /></a>
-      <nav class="navlinks" aria-label="Primary navigation"><a aria-current="page" href="index.html">Home</a><a  href="services.html">Services</a><a  href="packages.html">Packages</a><a  href="process.html">Process</a><a  href="principles.html">Principles</a><a  href="faq.html">FAQ</a></nav>
-      <a class="btn primary" href="contact.html">Book a fit check</a>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">MIAMI KNIFE GUY</p>
+      <h1>Inquiry Pipeline</h1>
+    </div>
+    <div class="top-actions">
+      <button class="secondary" id="seedBtn">Load demo lead</button>
+      <button class="primary" id="newLeadBtn">+ New inquiry</button>
     </div>
   </header>
-  <main class="main"><div class="wrap hero-grid">
-  <section class="hero card">
-    <span class="eyebrow"><span class="dot"></span> High-trust web systems for service businesses</span>
-    <h1>Turn your website into a <span class="grad">trust engine</span> that brings in better leads.</h1>
-    <p class="lead">SMWS builds clear, fast, conversion-focused websites and lead systems for businesses that need more than a pretty homepage. We clarify the offer, fix the funnel, and make the next step obvious.</p>
-    <div class="actions"><a class="btn primary" href="packages.html">See packages</a><a class="btn secondary" href="services.html">What we fix</a></div>
-    <div class="pills"><span class="pill"><span class="check">✓</span>Strategy before design</span><span class="pill"><span class="check">✓</span>Mobile-first build</span><span class="pill"><span class="check">✓</span>Lead routing included</span></div>
-  </section>
-  <aside class="logo-panel card">
-    <div class="logo-box"><img src="assets/smws-logo.svg" alt="SMWS geometric navy and teal logo" /></div>
-    <div class="mini-proof"><h2>Your site should answer three questions fast.</h2><p>Can I trust you? Do you solve my problem? What do I do next?</p></div>
-  </aside>
-</div></main>
-  <footer class="footer"><div class="wrap footer-inner"><img src="assets/smws-logo.svg" alt="SMWS" /><span><span class="domain">smws.work</span> · Built for clarity, trust, and conversion.</span></div></footer>
+
+  <main class="shell">
+    <section class="stats" id="stats"></section>
+
+    <section class="workspace">
+      <aside class="pipeline-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">PIPELINE</p><h2>Conversations</h2></div>
+          <select id="statusFilter" aria-label="Filter by status"></select>
+        </div>
+        <div id="leadList" class="lead-list"></div>
+      </aside>
+
+      <section class="detail-panel" id="detailPanel">
+        <div class="empty-state">
+          <div class="empty-icon">✦</div>
+          <h2>Select a conversation</h2>
+          <p>Review the customer, update the stage, add messages, and generate the next follow-up draft.</p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="leadDialog">
+    <form method="dialog" id="leadForm">
+      <div class="dialog-heading"><div><p class="eyebrow">NEW INQUIRY</p><h2>Add customer request</h2></div><button class="icon-btn" value="cancel" aria-label="Close">×</button></div>
+      <div class="form-grid">
+        <label>Name<input name="name" required placeholder="Customer name"></label>
+        <label>Phone<input name="phone" required placeholder="(305) 555-0123"></label>
+        <label>Email<input name="email" type="email" placeholder="Optional"></label>
+        <label>Location<input name="location" placeholder="Hollywood Beach"></label>
+        <label>Knife count<input name="knifeCount" type="number" min="0" placeholder="7"></label>
+        <label>Brands<input name="brands" placeholder="Global, Paudin"></label>
+        <label class="full">Incoming message<textarea name="message" required placeholder="Paste the customer’s inquiry here"></textarea></label>
+      </div>
+      <div class="dialog-actions"><button value="cancel" class="secondary">Cancel</button><button value="default" class="primary" id="saveLeadBtn">Create inquiry</button></div>
+    </form>
+  </dialog>
+
+  <template id="detailTemplate">
+    <div class="detail-wrap">
+      <header class="customer-header">
+        <div><p class="eyebrow">CUSTOMER</p><h2 data-field="name"></h2><p class="muted" data-field="contact"></p></div>
+        <div class="header-controls"><select data-action="status"></select><button class="danger ghost" data-action="dnc">Do not contact</button></div>
+      </header>
+      <div class="customer-grid">
+        <section class="card customer-facts"><h3>Service snapshot</h3><div data-field="facts"></div></section>
+        <section class="card next-action"><h3>Next action</h3><div data-field="nextAction"></div></section>
+      </div>
+      <section class="card conversation-card">
+        <div class="card-heading"><div><p class="eyebrow">TIMELINE</p><h3>Conversation</h3></div><span class="badge" data-field="messageCount"></span></div>
+        <div class="conversation" data-field="conversation"></div>
+        <form class="composer" data-action="composer">
+          <select name="direction"><option value="inbound">Customer replied</option><option value="outbound">Message I sent</option></select>
+          <textarea name="text" required placeholder="Paste or type the message"></textarea>
+          <button class="primary">Add message</button>
+        </form>
+      </section>
+      <section class="card draft-card">
+        <div class="card-heading"><div><p class="eyebrow">APPROVAL QUEUE</p><h3>Recommended draft</h3></div><button class="secondary" data-action="regenerate">Regenerate</button></div>
+        <div class="reason-box" data-field="reason"></div>
+        <textarea data-field="draft"></textarea>
+        <div class="draft-meta" data-field="draftMeta"></div>
+        <div class="draft-actions"><button class="secondary" data-action="copy">Copy for Phone Link</button><button class="primary" data-action="markSent">Mark as sent</button></div>
+      </section>
+      <section class="card history-card"><div class="card-heading"><div><p class="eyebrow">RETENTION</p><h3>Campaign eligibility</h3></div></div><div data-field="campaigns"></div></section>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
 </body>
 </html>
