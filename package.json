@@ -1,6 +1,6 @@
 {
-  "name": "smws-static-site",
+  "name": "mkg-growth-engine",
   "version": "1.0.0",
   "private": true,
-  "description": "Static launch site for Sean Maffit Web Systems at smws.work"
+  "description": "Miami Knife Guy inquiry pipeline, follow-up drafting, and retention dashboard"
 }
