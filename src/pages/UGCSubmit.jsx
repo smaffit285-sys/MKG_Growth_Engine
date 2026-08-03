@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { CircleCheckBig } from 'lucide-react'
 import { db } from '../lib/firebase'
 import {
   collection,
@@ -9,7 +10,7 @@ import {
   addDoc,
   serverTimestamp,
 } from 'firebase/firestore'
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { deleteObject, getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage'
 
 const PLATFORMS = ['TikTok', 'Instagram', 'Facebook', 'Threads', 'X (Twitter)']
 
@@ -51,12 +52,14 @@ export default function UGCSubmit() {
     }
     setSubmitting(true)
     setError('')
+    let uploadedScreenshotRef = null
     try {
       let screenshotUrl = ''
       if (screenshot) {
         const storage = getStorage()
         const storageRef = ref(storage, `ugc-screenshots/${Date.now()}-${screenshot.name}`)
         const snap = await uploadBytes(storageRef, screenshot)
+        uploadedScreenshotRef = snap.ref
         screenshotUrl = await getDownloadURL(snap.ref)
       }
       await addDoc(collection(db, 'ugcSubmissions'), {
@@ -73,6 +76,13 @@ export default function UGCSubmit() {
       setSubmitted(true)
     } catch (e) {
       console.error(e)
+      if (uploadedScreenshotRef) {
+        try {
+          await deleteObject(uploadedScreenshotRef)
+        } catch (cleanupError) {
+          console.error('Could not remove orphaned screenshot', cleanupError)
+        }
+      }
       setError('Something went wrong. Please try again.')
     } finally {
       setSubmitting(false)
@@ -91,7 +101,7 @@ export default function UGCSubmit() {
     return (
       <div className="public-shell">
         <div className="public-card text-center">
-          <div className="text-5xl mb-4">🎉</div>
+          <CircleCheckBig className="mx-auto mb-4 h-12 w-12 text-cyan-300" aria-hidden="true" />
           <h2 className="text-2xl font-bold text-white mb-2">Submission Received!</h2>
           <p className="text-gray-400">We will review your post and award your reward within 1-3 business days.</p>
         </div>
@@ -107,7 +117,7 @@ export default function UGCSubmit() {
           <h1 className="font-['Barlow_Condensed'] text-5xl uppercase tracking-wide leading-none text-white mb-3">Show off the edge.</h1>
           <h2 className="text-lg font-semibold text-cyan-200 mb-2">Share MKG and earn rewards</h2>
           {customer && (
-            <p className="text-orange-400 text-sm">Hi, {customer.firstName}! 👋</p>
+            <p className="text-orange-400 text-sm">Hi, {customer.firstName}!</p>
           )}
         </div>
         <div className="bg-gray-800 rounded-xl p-4 mb-6">

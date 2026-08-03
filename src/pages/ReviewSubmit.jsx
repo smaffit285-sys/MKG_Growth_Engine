@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { CheckCircle2, Home, Search, Star, ThumbsUp } from 'lucide-react'
 import { db } from '../lib/firebase'
 import {
   collection,
@@ -11,10 +12,10 @@ import {
 } from 'firebase/firestore'
 
 const PLATFORMS = [
-  { name: 'Google', icon: '🔍', color: 'bg-blue-600 hover:bg-blue-700', url: 'https://search.google.com/local/writereview' },
-  { name: 'Yelp', icon: '⭐', color: 'bg-red-600 hover:bg-red-700', url: 'https://www.yelp.com/writeareview' },
-  { name: 'Facebook', icon: '👍', color: 'bg-blue-800 hover:bg-blue-900', url: 'https://www.facebook.com' },
-  { name: 'Nextdoor', icon: '🏘️', color: 'bg-green-600 hover:bg-green-700', url: 'https://nextdoor.com' },
+  { name: 'Google', icon: Search, color: 'bg-blue-600 hover:bg-blue-700', url: 'https://search.google.com/local/writereview' },
+  { name: 'Yelp', icon: Star, color: 'bg-red-600 hover:bg-red-700', url: 'https://www.yelp.com/writeareview' },
+  { name: 'Facebook', icon: ThumbsUp, color: 'bg-blue-800 hover:bg-blue-900', url: 'https://www.facebook.com' },
+  { name: 'Nextdoor', icon: Home, color: 'bg-green-600 hover:bg-green-700', url: 'https://nextdoor.com' },
 ]
 
 export default function ReviewSubmit() {
@@ -87,7 +88,7 @@ export default function ReviewSubmit() {
     return (
       <div className="public-shell">
         <div className="public-card text-center">
-          <div className="text-5xl mb-4">✅</div>
+          <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-cyan-300" aria-hidden="true" />
           <h2 className="text-2xl font-bold text-white mb-2">Thank You!</h2>
           <p className="text-gray-400">Submitted for review — credit issued once approved (1-3 business days)</p>
         </div>
@@ -104,7 +105,7 @@ export default function ReviewSubmit() {
           <h2 className="text-xl font-semibold text-cyan-200 mb-2">Earn $10 credit</h2>
           <p className="text-gray-400 text-sm">Leave an honest review on any platform below</p>
           {customer && (
-            <p className="text-orange-400 text-sm mt-2">Hi, {customer.firstName}! 👋</p>
+            <p className="text-orange-400 text-sm mt-2">Hi, {customer.firstName}!</p>
           )}
         </div>
         {!selectedPlatform ? (
@@ -116,7 +117,7 @@ export default function ReviewSubmit() {
                 onClick={() => handlePlatformClick(p)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white font-medium transition-colors ${p.color}`}
               >
-                <span className="text-xl">{p.icon}</span>
+                <p.icon className="h-5 w-5" aria-hidden="true" />
                 <span>{p.name}</span>
               </button>
             ))}
