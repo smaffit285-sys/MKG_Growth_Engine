@@ -7,9 +7,10 @@ import {
   orderBy,
   doc,
   updateDoc,
-  addDoc,
   serverTimestamp,
   getDoc,
+  increment,
+  writeBatch,
 } from 'firebase/firestore'
 
 const STATUS_COLORS = {
@@ -24,6 +25,7 @@ export default function Reviews() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [processing, setProcessing] = useState({})
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
     const q = query(collection(db, 'reviewSubmissions'), orderBy('createdAt', 'desc'))
@@ -61,15 +63,16 @@ export default function Reviews() {
   const handleApprove = async (sub) => {
     if (processing[sub.id]) return
     setProcessing(p => ({ ...p, [sub.id]: true }))
+    setActionError('')
     try {
-      await updateDoc(doc(db, 'reviewSubmissions', sub.id), { status: 'approved', rewardIssued: true })
-      if (sub.customerId) {
-        const custDoc = await getDoc(doc(db, 'customers', sub.customerId))
-        if (custDoc.exists()) {
-          const current = custDoc.data().rewardsBalance || 0
-          await updateDoc(doc(db, 'customers', sub.customerId), { rewardsBalance: current + 10 })
-        }
-        await addDoc(collection(db, 'rewardLedger'), {
+      const submissionRef = doc(db, 'reviewSubmissions', sub.id)
+      const currentSubmission = await getDoc(submissionRef)
+      if (!currentSubmission.exists() || currentSubmission.data().rewardIssued) return
+      const batch = writeBatch(db)
+      batch.update(submissionRef, { status: 'approved', rewardIssued: true, reviewedAt: serverTimestamp() })
+      if (sub.customerId && customers[sub.customerId]) {
+        batch.update(doc(db, 'customers', sub.customerId), { rewardsBalance: increment(10), lastActivity: serverTimestamp() })
+        batch.set(doc(collection(db, 'rewardLedger')), {
           customerId: sub.customerId,
           type: 'review_approved',
           amount: 10,
@@ -79,8 +82,10 @@ export default function Reviews() {
           createdAt: serverTimestamp(),
         })
       }
+      await batch.commit()
     } catch (e) {
       console.error(e)
+      setActionError('The review was not approved. Nothing was changed; please try again.')
     } finally {
       setProcessing(p => ({ ...p, [sub.id]: false }))
     }
@@ -89,10 +94,12 @@ export default function Reviews() {
   const handleReject = async (sub) => {
     if (processing[sub.id]) return
     setProcessing(p => ({ ...p, [sub.id]: true }))
+    setActionError('')
     try {
       await updateDoc(doc(db, 'reviewSubmissions', sub.id), { status: 'rejected' })
     } catch (e) {
       console.error(e)
+      setActionError('The review was not rejected. Please try again.')
     } finally {
       setProcessing(p => ({ ...p, [sub.id]: false }))
     }
@@ -101,6 +108,7 @@ export default function Reviews() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold text-white mb-6">Review Submissions</h1>
+      {actionError && <div role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-950/40 p-3 text-sm text-red-200">{actionError}</div>}
       {loading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => <div key={i} className="h-16 bg-gray-800 rounded-lg animate-pulse" />)}

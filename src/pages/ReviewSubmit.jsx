@@ -85,8 +85,8 @@ export default function ReviewSubmit() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-        <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full text-center shadow-xl">
+      <div className="public-shell">
+        <div className="public-card text-center">
           <div className="text-5xl mb-4">✅</div>
           <h2 className="text-2xl font-bold text-white mb-2">Thank You!</h2>
           <p className="text-gray-400">Submitted for review — credit issued once approved (1-3 business days)</p>
@@ -96,11 +96,12 @@ export default function ReviewSubmit() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full shadow-xl">
+    <div className="public-shell">
+      <div className="public-card">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-orange-500 mb-1">Share Your Experience</h1>
-          <h2 className="text-xl font-semibold text-white mb-2">Earn $10 Credit</h2>
+          <p className="page-eyebrow mb-2">For the craft. For the guest.</p>
+          <h1 className="font-['Barlow_Condensed'] text-5xl uppercase tracking-wide leading-none text-white mb-3">Share the glide.</h1>
+          <h2 className="text-xl font-semibold text-cyan-200 mb-2">Earn $10 credit</h2>
           <p className="text-gray-400 text-sm">Leave an honest review on any platform below</p>
           {customer && (
             <p className="text-orange-400 text-sm mt-2">Hi, {customer.firstName}! 👋</p>
@@ -144,7 +145,7 @@ export default function ReviewSubmit() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-800 text-white font-bold py-3 rounded-lg transition-colors"
+                className="btn-primary w-full disabled:opacity-50"
               >
                 {submitting ? 'Submitting...' : 'Submit for Review'}
               </button>

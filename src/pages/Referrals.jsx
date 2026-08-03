@@ -38,9 +38,9 @@ export default function Referrals() {
         ids.add(r.referringCustomerId)
         ids.add(r.referredCustomerId)
       })
-      const custMap = { ...customers }
+      const custMap = {}
       await Promise.all(Array.from(ids).map(async id => {
-        if (id && !custMap[id]) {
+        if (id) {
           const d = await getDoc(doc(db, 'customers', id))
           if (d.exists()) custMap[id] = d.data()
         }

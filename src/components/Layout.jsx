@@ -1,57 +1,151 @@
-import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import {
+  BookOpenCheck,
+  Building2,
+  ChevronDown,
+  CircleUserRound,
+  Clock3,
+  FileText,
+  Gauge,
+  Images,
+  LogOut,
+  Menu,
+  MessageSquareText,
+  ReceiptText,
+  Scissors,
+  Settings,
+  Sparkles,
+  Star,
+  Trophy,
+  UserRoundPlus,
+  UsersRound,
+  X,
+} from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
-const NAV_ITEMS = [
-  { path: '/dashboard', label: 'Dashboard', icon: '📊' },
-  { path: '/customers', label: 'Customers', icon: '👥' },
-  { path: '/commercial', label: 'Commercial', icon: '🏢' },
-  { path: '/timeline', label: 'Timeline', icon: '🕒' },
-  { path: '/sessions', label: 'Sessions', icon: '🔪' },
-  { path: '/content', label: 'Content', icon: '🎬' },
-  { path: '/proof', label: 'Proof Vault', icon: '🏆' },
-  { path: '/training', label: 'Training', icon: '🧠' },
-  { path: '/invoices', label: 'Invoices', icon: '🧾' },
-  { path: '/referrals', label: 'Referrals', icon: '🔗' },
-  { path: '/rewards', label: 'Rewards', icon: '⭐' },
-  { path: '/ugc', label: 'UGC', icon: '📸' },
-  { path: '/reviews', label: 'Reviews', icon: '💬' },
-  { path: '/settings', label: 'Settings', icon: '⚙️' },
+const NAV_GROUPS = [
+  {
+    label: 'Work',
+    items: [
+      { path: '/dashboard', label: 'Today', icon: Gauge },
+      { path: '/field', label: 'New service', icon: Scissors, primary: true },
+      { path: '/customers', label: 'Customers', icon: UsersRound },
+      { path: '/invoices', label: 'Invoices', icon: ReceiptText },
+      { path: '/commercial', label: 'Commercial', icon: Building2 },
+    ],
+  },
+  {
+    label: 'Grow',
+    items: [
+      { path: '/referrals', label: 'Referrals', icon: UserRoundPlus },
+      { path: '/reviews', label: 'Reviews', icon: MessageSquareText },
+      { path: '/ugc', label: 'Customer posts', icon: Images },
+      { path: '/rewards', label: 'Rewards', icon: Star },
+    ],
+  },
+  {
+    label: 'Improve',
+    collapsible: true,
+    items: [
+      { path: '/timeline', label: 'Activity', icon: Clock3 },
+      { path: '/sessions', label: 'Quality sessions', icon: Sparkles },
+      { path: '/content', label: 'Content', icon: FileText },
+      { path: '/proof', label: 'Proof vault', icon: Trophy },
+      { path: '/training', label: 'Training', icon: BookOpenCheck },
+      { path: '/settings', label: 'Settings', icon: Settings },
+    ],
+  },
 ]
+
+const PAGE_NAMES = Object.fromEntries(NAV_GROUPS.flatMap(group => group.items.map(item => [item.path, item.label])))
+
+function NavItem({ item, active, onNavigate }) {
+  const Icon = item.icon
+  return (
+    <Link
+      to={item.path}
+      onClick={onNavigate}
+      className={`nav-item ${active ? 'nav-item-active' : ''} ${item.primary ? 'nav-item-primary' : ''}`}
+    >
+      <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
+      <span>{item.label}</span>
+    </Link>
+  )
+}
 
 export default function Layout({ children }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { logout } = useAuth()
+  const { currentUser, logout } = useAuth()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [improveOpen, setImproveOpen] = useState(false)
 
   const handleLogout = async () => {
     try {
       await logout()
       navigate('/login')
-    } catch (e) {
-      console.error(e)
+    } catch (error) {
+      console.error(error)
     }
   }
 
+  const pageName = PAGE_NAMES[location.pathname] || (location.pathname.startsWith('/customer/') ? 'Customer' : 'Growth Engine')
+
   return (
-    <div className="flex min-h-screen bg-zinc-950">
-      <nav className="w-56 bg-zinc-900 flex flex-col py-6 px-3 border-r border-zinc-800 shrink-0">
-        <div className="mb-8 px-3">
-          <h1 className="text-orange-500 font-bold text-lg leading-tight tracking-tight">Miami Knife Guy</h1>
-          <p className="text-zinc-500 text-xs mt-1">Growth Engine</p>
-        </div>
-        <div className="flex-1 space-y-0.5 overflow-y-auto">
-          {NAV_ITEMS.map(item => (
-            <Link key={item.path} to={item.path} className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors ${location.pathname === item.path ? 'bg-orange-500/20 text-orange-400 font-medium' : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'}`}>
-              <span className="text-base">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </div>
-        <button onClick={handleLogout} className="mt-4 flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors">
-          <span>🚪</span><span>Logout</span>
+    <div className="app-shell">
+      <header className="mobile-header">
+        <button className="icon-button" onClick={() => setMobileOpen(true)} aria-label="Open navigation">
+          <Menu size={24} />
         </button>
-      </nav>
-      <main className="flex-1 overflow-auto bg-zinc-950">{children}</main>
+        <div>
+          <p className="mobile-brand">MKG</p>
+          <p className="mobile-page">{pageName}</p>
+        </div>
+        <Link to="/field" className="mobile-new-service" aria-label="Start a new service"><Scissors size={20} /></Link>
+      </header>
+
+      {mobileOpen && <button className="nav-scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
+
+      <aside className={`app-sidebar ${mobileOpen ? 'app-sidebar-open' : ''}`}>
+        <div className="brand-lockup">
+          <div className="brand-mark" aria-hidden="true">MKG</div>
+          <div>
+            <p className="brand-name">Miami Knife Guy</p>
+            <p className="brand-product">Growth Engine</p>
+          </div>
+          <button className="icon-button sidebar-close" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X size={22} /></button>
+        </div>
+
+        <nav className="sidebar-nav" aria-label="Primary navigation">
+          {NAV_GROUPS.map(group => {
+            const hasActiveItem = group.items.some(item => location.pathname === item.path)
+            const visible = !group.collapsible || improveOpen || hasActiveItem
+            return (
+              <section key={group.label} className="nav-group">
+                {group.collapsible ? (
+                  <button className="nav-group-toggle" onClick={() => setImproveOpen(value => !value)} aria-expanded={visible}>
+                    <span>{group.label}</span><ChevronDown size={16} className={visible ? 'rotate-180' : ''} />
+                  </button>
+                ) : <p className="nav-group-label">{group.label}</p>}
+                {visible && <div className="nav-list">{group.items.map(item => (
+                  <NavItem key={item.path} item={item} active={location.pathname === item.path} onNavigate={() => setMobileOpen(false)} />
+                ))}</div>}
+              </section>
+            )
+          })}
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="user-chip">
+            <CircleUserRound size={20} aria-hidden="true" />
+            <div><span>Signed in</span><small>{currentUser?.email || 'MKG operator'}</small></div>
+          </div>
+          <button onClick={handleLogout} className="logout-button"><LogOut size={18} /><span>Sign out</span></button>
+        </div>
+      </aside>
+
+      <main className="app-main">{children}</main>
     </div>
   )
 }

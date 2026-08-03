@@ -89,8 +89,8 @@ export default function UGCSubmit() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-        <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full text-center shadow-xl">
+      <div className="public-shell">
+        <div className="public-card text-center">
           <div className="text-5xl mb-4">🎉</div>
           <h2 className="text-2xl font-bold text-white mb-2">Submission Received!</h2>
           <p className="text-gray-400">We will review your post and award your reward within 1-3 business days.</p>
@@ -100,11 +100,12 @@ export default function UGCSubmit() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full shadow-xl">
+    <div className="public-shell">
+      <div className="public-card">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-orange-500 mb-1">Share MKG on Social</h1>
-          <h2 className="text-lg font-semibold text-white mb-2">Earn Rewards</h2>
+          <p className="page-eyebrow mb-2">Miami Knife Guy</p>
+          <h1 className="font-['Barlow_Condensed'] text-5xl uppercase tracking-wide leading-none text-white mb-3">Show off the edge.</h1>
+          <h2 className="text-lg font-semibold text-cyan-200 mb-2">Share MKG and earn rewards</h2>
           {customer && (
             <p className="text-orange-400 text-sm">Hi, {customer.firstName}! 👋</p>
           )}
@@ -154,7 +155,7 @@ export default function UGCSubmit() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-800 text-white font-bold py-3 rounded-lg transition-colors"
+            className="btn-primary w-full disabled:opacity-50"
           >
             {submitting ? 'Submitting...' : 'Submit Post for Review'}
           </button>

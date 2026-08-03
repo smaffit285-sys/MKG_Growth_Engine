@@ -1,0 +1,32 @@
+{
+  "name": "MKG Growth Engine",
+  "short_name": "MKG",
+  "description": "Miami Knife Guy field dashboard and service workflow.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "/mkg-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Service",
+      "short_name": "Service",
+      "url": "/field",
+      "description": "Start a customer service visit."
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "url": "/dashboard",
+      "description": "Open the MKG command dashboard."
+    }
+  ]
+}
