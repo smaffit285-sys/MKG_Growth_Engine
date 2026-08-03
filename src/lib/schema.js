@@ -7,6 +7,7 @@ export const COLLECTIONS = {
   PROOF_ASSETS: 'proofAssets',
   TRAINING_SESSIONS: 'trainingSessions',
   SHARPENING_SESSIONS: 'sharpeningSessions',
+  SERVICE_RECORDS: 'serviceRecords',
   INVOICES: 'invoices',
   PAYMENT_ACTIONS: 'paymentActions',
   INVOICE_REMINDERS: 'invoiceReminders',
@@ -27,6 +28,10 @@ export const TRAINING_OUTCOMES = { PASS: 'pass', NEEDS_REVIEW: 'needs_review', F
 export const INVOICE_TYPES = { B2C: 'b2c', B2B: 'b2b' }
 export const INVOICE_STATUS = { DRAFT: 'draft', SENT: 'sent', PAID: 'paid', OVERDUE: 'overdue', VOID: 'void' }
 export const LINE_ITEM_TYPES = { SHARPENING: 'sharpening', REPAIR: 'repair', RUSH: 'rush', PICKUP_DELIVERY: 'pickup_delivery', MEMBERSHIP: 'membership', WORKSHOP: 'workshop', COURSE: 'course', OTHER: 'other' }
+export const SERVICE_STATUS = { DRAFT: 'draft', COMPLETE: 'complete', INVOICED: 'invoiced', PAID: 'paid', FOLLOW_UP: 'follow_up' }
+export const SERVICE_LINE_ITEM_TYPES = { KNIFE_COUNT: 'knife_count', STAMPED_REPAIR: 'stamped_repair', FORGED_REPAIR: 'forged_repair', JAPANESE_REPAIR: 'japanese_repair', FOOD_PROCESSOR: 'food_processor', MEAT_SLICER: 'meat_slicer', SCISSORS: 'scissors', JAPANESE_MANDOLIN: 'japanese_mandolin', IMMERSION_BLENDER: 'immersion_blender', VITAMIX_BLENDER_BLADE: 'vitamix_blender_blade', BUFFALO_CHOPPER: 'buffalo_chopper', MEAT_GRINDER_12_SET: 'meat_grinder_12_set', FRENCH_MANDOLIN: 'french_mandolin', INDUSTRIAL_FOOD_PROCESSOR_BLADE: 'industrial_food_processor_blade', INDUSTRIAL_FOOD_PROCESSOR_SERRATED_BLADE: 'industrial_food_processor_serrated_blade', BONE_CLEAVER: 'bone_cleaver', THICK_SINGLE_BEVEL_INCH: 'thick_single_bevel_inch', THIN_SINGLE_BEVEL_INCH: 'thin_single_bevel_inch', CUSTOM: 'custom' }
+export const DISCOUNT_TYPES = { FLAT: 'flat', PERCENT: 'percent' }
+export const REVIEW_STATUS = { NOT_REQUESTED: 'not_requested', REQUESTED: 'requested', POSTED: 'posted', FOLLOW_UP_NEEDED: 'follow_up_needed' }
 export const PAYMENT_METHODS = { STRIPE: 'stripe', CASH_APP: 'cash_app', VENMO: 'venmo', PAYPAL: 'paypal', CASH: 'cash', CRYPTO: 'crypto', OTHER: 'other' }
 export const PAYMENT_STATUS = { UNPAID: 'unpaid', PARTIAL: 'partial', PAID: 'paid', REFUNDED: 'refunded' }
 export const PAYMENT_ACTION_STATUS = { PENDING: 'pending', CREATED: 'created', SENT: 'sent', FAILED: 'failed', COMPLETED: 'completed' }

@@ -1,28 +1,36 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Customers from './pages/Customers'
-import CustomerDetail from './pages/CustomerDetail'
-import CommercialAccounts from './pages/CommercialAccounts'
-import Timeline from './pages/Timeline'
-import SharpeningSessions from './pages/SharpeningSessions'
-import ContentPipeline from './pages/ContentPipeline'
-import ProofVault from './pages/ProofVault'
-import TrainingDashboard from './pages/TrainingDashboard'
-import Invoices from './pages/Invoices'
-import Referrals from './pages/Referrals'
-import Rewards from './pages/Rewards'
-import UGC from './pages/UGC'
-import Reviews from './pages/Reviews'
-import ReferralLanding from './pages/ReferralLanding'
-import FreeSharpening from './pages/FreeSharpening'
-import CustomerCapture from './pages/CustomerCapture'
-import ReviewSubmit from './pages/ReviewSubmit'
-import UGCSubmit from './pages/UGCSubmit'
-import Settings from './pages/Settings'
+
+const Login = lazy(() => import('./pages/Login'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const ServiceDesk = lazy(() => import('./pages/ServiceDesk'))
+const Customers = lazy(() => import('./pages/Customers'))
+const CustomerDetail = lazy(() => import('./pages/CustomerDetail'))
+const CommercialAccounts = lazy(() => import('./pages/CommercialAccounts'))
+const Timeline = lazy(() => import('./pages/Timeline'))
+const SharpeningSessions = lazy(() => import('./pages/SharpeningSessions'))
+const ContentPipeline = lazy(() => import('./pages/ContentPipeline'))
+const ProofVault = lazy(() => import('./pages/ProofVault'))
+const TrainingDashboard = lazy(() => import('./pages/TrainingDashboard'))
+const Invoices = lazy(() => import('./pages/Invoices'))
+const Referrals = lazy(() => import('./pages/Referrals'))
+const Rewards = lazy(() => import('./pages/Rewards'))
+const UGC = lazy(() => import('./pages/UGC'))
+const Reviews = lazy(() => import('./pages/Reviews'))
+const ReferralLanding = lazy(() => import('./pages/ReferralLanding'))
+const FreeSharpening = lazy(() => import('./pages/FreeSharpening'))
+const CustomerCapture = lazy(() => import('./pages/CustomerCapture'))
+const ReviewSubmit = lazy(() => import('./pages/ReviewSubmit'))
+const UGCSubmit = lazy(() => import('./pages/UGCSubmit'))
+const Settings = lazy(() => import('./pages/Settings'))
+const NotFound = lazy(() => import('./pages/NotFound'))
+
+function PageLoading() {
+  return <div className="min-h-screen grid place-items-center bg-[#05070d]"><div className="h-11 w-11 animate-spin rounded-full border-2 border-cyan-300/20 border-t-cyan-300" aria-label="Loading page" /></div>
+}
 
 function RootRedirect() {
   const { currentUser } = useAuth()
@@ -35,10 +43,12 @@ function ProtectedLayout({ children }) {
 
 export default function App() {
   return (
-    <Routes>
+    <Suspense fallback={<PageLoading />}><Routes>
       <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
+      <Route path="/field" element={<ProtectedLayout><ServiceDesk /></ProtectedLayout>} />
+      <Route path="/services/new" element={<ProtectedLayout><ServiceDesk /></ProtectedLayout>} />
       <Route path="/customers" element={<ProtectedLayout><Customers /></ProtectedLayout>} />
       <Route path="/customer/:id" element={<ProtectedLayout><CustomerDetail /></ProtectedLayout>} />
       <Route path="/commercial" element={<ProtectedLayout><CommercialAccounts /></ProtectedLayout>} />
@@ -58,6 +68,7 @@ export default function App() {
       <Route path="/review" element={<ReviewSubmit />} />
       <Route path="/ugc-submit" element={<UGCSubmit />} />
       <Route path="/free-sharpening" element={<FreeSharpening />} />
-    </Routes>
+      <Route path="*" element={<NotFound />} />
+    </Routes></Suspense>
   )
 }
