@@ -16,7 +16,7 @@ import { db } from '../lib/firebase'
 import { COLLECTIONS } from '../lib/schema'
 import { contactDisplayName, customerDisplayName } from '../lib/serviceMath'
 
-const TABS = ['Overview', 'Services', 'Invoices', 'Referrals', 'Rewards']
+const TABS = ['Overview', 'Activity', 'Services', 'Invoices', 'Referrals', 'Rewards']
 
 const STATUS_COLORS = {
   unpaid: 'bg-red-500/20 text-red-300 border-red-500/30',
@@ -51,6 +51,7 @@ export default function CustomerDetail() {
   const [invoices, setInvoices] = useState([])
   const [referrals, setReferrals] = useState([])
   const [rewardLedger, setRewardLedger] = useState([])
+  const [events, setEvents] = useState([])
 
   useEffect(() => {
     async function loadCustomer() {
@@ -99,6 +100,13 @@ export default function CustomerDetail() {
   useEffect(() => {
     const q = query(collection(db, 'rewardLedger'), where('customerId', '==', id), orderBy('createdAt', 'desc'))
     return onSnapshot(q, snap => setRewardLedger(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+  }, [id])
+
+  useEffect(() => {
+    const q = query(collection(db, 'customerEvents'), where('customerId', '==', id))
+    return onSnapshot(q, snap => setEvents(snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))))
   }, [id])
 
   const stats = useMemo(() => {
@@ -202,6 +210,7 @@ export default function CustomerDetail() {
               ['Preferred Pricing', 'preferredPricing'],
               ['Review Status', 'reviewStatus'],
               ['Referral Source', 'referralSource'],
+              ['Latest Website Request', 'latestServiceType'],
               ['Next Follow-Up', 'nextFollowUpDate'],
             ].map(([label, field]) => (
               <div key={field}>
@@ -226,6 +235,7 @@ export default function CustomerDetail() {
         </section>
       )}
 
+      {activeTab === 'Activity' && <ActivityList events={events} />}
       {activeTab === 'Services' && <ServiceList services={services} navigate={navigate} customerId={id} />}
       {activeTab === 'Invoices' && <InvoiceList invoices={invoices} />}
       {activeTab === 'Referrals' && <SimpleList title={`Referrals (${referrals.length})`} items={referrals} empty="No referrals yet." />}
@@ -246,6 +256,30 @@ export default function CustomerDetail() {
         </section>
       )}
     </div>
+  )
+}
+
+function ActivityList({ events }) {
+  return (
+    <section className="bg-zinc-900 rounded-2xl border border-zinc-800 p-5 space-y-3">
+      <h2 className="text-lg font-semibold text-white">Website &amp; CRM Activity ({events.length})</h2>
+      {events.length === 0 ? <p className="text-zinc-500 text-sm">No website activity yet.</p> : events.map(event => {
+        const details = event.details || {}
+        const summary = details.requestSummary || details.notes || details.feedback || details.customerMessage || ''
+        const campaign = event.attribution?.utm_campaign || event.attribution?.utm_source || ''
+        return (
+          <article key={event.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 space-y-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-white font-medium capitalize">{String(event.eventType || 'activity').replace(/_/g, ' ')}</p>
+              <p className="text-zinc-500 text-xs">{dateLabel(event.createdAt)}</p>
+            </div>
+            <p className="text-zinc-400 text-sm">{event.serviceType || 'General'} · {event.source || 'Unknown source'}</p>
+            {summary && <p className="text-zinc-300 text-sm whitespace-pre-wrap line-clamp-4">{String(summary)}</p>}
+            {campaign && <p className="text-cyan-300 text-xs">Attribution: {campaign}</p>}
+          </article>
+        )
+      })}
+    </section>
   )
 }
 
