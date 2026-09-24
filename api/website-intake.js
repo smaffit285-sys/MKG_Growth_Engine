@@ -1,16 +1,9 @@
-import { timingSafeEqual } from 'node:crypto'
 import { getApps, initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { ExternalAccountClient } from 'google-auth-library'
-import { getVercelOidcToken } from '@vercel/oidc'
+import { getVercelOidcToken, verifyVercelOidcToken } from '@vercel/oidc'
 
 const EVENT_TYPES = new Set(['form_submission', 'booking_request', 'chat_turn', 'review_submission', 'referral_request'])
-
-function secureEqual(left, right) {
-  const a = Buffer.from(String(left || ''))
-  const b = Buffer.from(String(right || ''))
-  return a.length === b.length && timingSafeEqual(a, b)
-}
 
 export function normalizePhone(value) {
   const digits = String(value || '').replace(/\D/g, '')
@@ -95,9 +88,18 @@ async function findCustomer(db, phone, email, sessionId) {
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-  const expected = process.env.CRM_INGEST_SECRET
   const supplied = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '')
-  if (!expected || !secureEqual(supplied, expected)) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    await verifyVercelOidcToken(supplied, {
+      issuer: 'https://oidc.vercel.com/smaffit285-sys-projects',
+      audience: 'https://vercel.com/smaffit285-sys-projects',
+      ownerId: 'team_EszcbP2rHpd7bmOXMxepvWAC',
+      projectId: 'prj_a8w26HeULu4jubzLet2M4o7aKkyv',
+      environment: ['preview', 'production'],
+    })
+  } catch {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
 
   try {
     const rawLength = Number(req.headers['content-length'] || 0)
