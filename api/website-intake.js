@@ -1,7 +1,7 @@
-import { getApps, initializeApp } from 'firebase-admin/app'
+import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
-import { ExternalAccountClient } from 'google-auth-library'
 import { getVercelOidcToken, verifyVercelOidcToken } from '@vercel/oidc'
+import { writeFile } from 'node:fs/promises'
 
 const EVENT_TYPES = new Set(['form_submission', 'booking_request', 'chat_turn', 'review_submission', 'referral_request'])
 
@@ -28,40 +28,37 @@ export function sanitize(value, depth = 0) {
   return undefined
 }
 
-function database() {
-  if (!getApps().length) {
-    const projectId = process.env.GCP_PROJECT_ID
-    const projectNumber = process.env.GCP_PROJECT_NUMBER
-    const serviceAccountEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL
-    const poolId = process.env.GCP_WORKLOAD_IDENTITY_POOL_ID
-    const providerId = process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID
-    if (!projectId || !projectNumber || !serviceAccountEmail || !poolId || !providerId) {
-      throw new Error('Google Cloud workload identity is not configured')
-    }
-
-    const authClient = ExternalAccountClient.fromJSON({
-      type: 'external_account',
-      audience: `//iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${poolId}/providers/${providerId}`,
-      subject_token_type: 'urn:ietf:params:oauth:token-type:jwt',
-      token_url: 'https://sts.googleapis.com/v1/token',
-      service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${serviceAccountEmail}:generateAccessToken`,
-      subject_token_supplier: { getSubjectToken: getVercelOidcToken },
-    })
-    if (!authClient) throw new Error('Unable to initialize Google Cloud workload identity')
-
-    const credential = {
-      async getAccessToken() {
-        const { token } = await authClient.getAccessToken()
-        if (!token) throw new Error('Google Cloud did not return an access token')
-        const expiry = authClient.credentials?.expiry_date
-        return {
-          access_token: token,
-          expires_in: expiry ? Math.max(1, Math.floor((expiry - Date.now()) / 1000)) : 3600,
-        }
-      },
-    }
-    initializeApp({ credential, projectId })
+async function database() {
+  const projectId = process.env.GCP_PROJECT_ID
+  const projectNumber = process.env.GCP_PROJECT_NUMBER
+  const serviceAccountEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL
+  const poolId = process.env.GCP_WORKLOAD_IDENTITY_POOL_ID
+  const providerId = process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID
+  if (!projectId || !projectNumber || !serviceAccountEmail || !poolId || !providerId) {
+    throw new Error('Google Cloud workload identity is not configured')
   }
+
+  // Firebase Admin's Firestore adapter requires Application Default Credentials.
+  // Materialize only Vercel's short-lived OIDC assertion in the function's
+  // ephemeral /tmp directory; no service-account key is created or stored.
+  const tokenPath = '/tmp/mkg-vercel-oidc-token'
+  const configPath = '/tmp/mkg-google-wif.json'
+  const subjectToken = await getVercelOidcToken()
+  const externalAccountConfig = {
+    type: 'external_account',
+    audience: `//iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${poolId}/providers/${providerId}`,
+    subject_token_type: 'urn:ietf:params:oauth:token-type:jwt',
+    token_url: 'https://sts.googleapis.com/v1/token',
+    service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${serviceAccountEmail}:generateAccessToken`,
+    credential_source: { file: tokenPath },
+  }
+  await Promise.all([
+    writeFile(tokenPath, subjectToken, { encoding: 'utf8', mode: 0o600 }),
+    writeFile(configPath, JSON.stringify(externalAccountConfig), { encoding: 'utf8', mode: 0o600 }),
+  ])
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = configPath
+
+  if (!getApps().length) initializeApp({ credential: applicationDefault(), projectId })
   return getFirestore()
 }
 
@@ -109,7 +106,7 @@ export default async function handler(req, res) {
     if (!EVENT_TYPES.has(body.eventType)) return res.status(400).json({ error: 'Invalid event type' })
     if (!body.source || cleanString(body.source, 120) !== body.source) return res.status(400).json({ error: 'Invalid source' })
 
-    const db = database()
+    const db = await database()
     const eventRef = db.collection('customerEvents').doc(body.eventId)
     if ((await eventRef.get()).exists) return res.status(200).json({ saved: true, duplicate: true })
 
