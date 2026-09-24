@@ -14,6 +14,60 @@ function cleanString(value, max = 4000) {
   return String(value ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').trim().slice(0, max)
 }
 
+function readable(value) {
+  if (value == null || value === '') return ''
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value)
+  return JSON.stringify(value)
+}
+
+export function formatLeadEmail(body, customerId) {
+  const contact = body.contact || {}
+  const details = body.details || {}
+  const sections = [
+    ['Event', {
+      'Type': body.eventType,
+      'Source': body.source,
+      'Service': body.serviceType,
+      'CRM customer ID': customerId,
+      'Event ID': body.eventId,
+    }],
+    ['Contact', contact],
+    ['Request details', details],
+    ['Attribution', body.attribution || {}],
+    ['Page', body.page || {}],
+  ]
+  return sections.flatMap(([heading, values]) => {
+    const lines = Object.entries(values).flatMap(([key, value]) => {
+      const rendered = readable(value)
+      return rendered ? [`${key}: ${rendered}`] : []
+    })
+    return lines.length ? [heading, ...lines, ''] : []
+  }).join('\n').trim()
+}
+
+async function sendLeadNotification(body, customerId) {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey || body.eventType === 'chat_turn') return { configured: Boolean(apiKey), sent: false }
+  const recipients = (process.env.LEAD_NOTIFICATION_TO || 'miamiknifeguy@gmail.com,smaffit@miamiknifeguy.com')
+    .split(',').map(value => value.trim()).filter(Boolean)
+  const from = process.env.LEAD_NOTIFICATION_FROM || 'MKG Website <bookings@miamiknifeguy.com>'
+  const contactName = cleanString(body.contact?.name || body.contact?.business || 'Website visitor', 100)
+  const subject = `[MKG Website] ${cleanString(body.eventType, 80).replaceAll('_', ' ')} — ${contactName}`
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from,
+      to: recipients,
+      subject,
+      text: formatLeadEmail(body, customerId),
+      ...(body.contact?.email ? { reply_to: cleanString(body.contact.email, 320) } : {}),
+    }),
+  })
+  if (!response.ok) throw new Error(`Lead notification email returned ${response.status}`)
+  return { configured: true, sent: true }
+}
+
 export function sanitize(value, depth = 0) {
   if (depth > 5) return undefined
   if (value == null || typeof value === 'boolean' || typeof value === 'number') return value
@@ -165,6 +219,14 @@ export default async function handler(req, res) {
         serviceType: body.serviceType || '', createdAt: FieldValue.serverTimestamp(),
       })
     })
+
+    try {
+      await sendLeadNotification(body, customerRef.id)
+    } catch (error) {
+      // CRM capture is the source of truth. A temporary email outage must not
+      // discard a lead that was already saved successfully.
+      console.error('Lead notification email error', error)
+    }
 
     return res.status(200).json({ saved: true, duplicate: false, customerId: customerRef.id })
   } catch (error) {
