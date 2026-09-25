@@ -1,5 +1,6 @@
 import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { QRCodeCanvas } from 'qrcode.react'
 import { FileDown, MessageSquareText } from 'lucide-react'
 import { db } from '../lib/firebase'
@@ -48,7 +49,8 @@ const DEFAULT_PAYMENT_OPTIONS = {
 const emptyItem = { ...emptyServiceItem }
 
 export default function Invoices() {
-  const [invoiceType, setInvoiceType] = useState(INVOICE_TYPES.B2C)
+  const [searchParams] = useSearchParams()
+  const [invoiceType, setInvoiceType] = useState(searchParams.get('type') === INVOICE_TYPES.B2B ? INVOICE_TYPES.B2B : INVOICE_TYPES.B2C)
   const [status, setStatus] = useState(INVOICE_STATUS.DRAFT)
   const [paymentStatus, setPaymentStatus] = useState(PAYMENT_STATUS.UNPAID)
   const [customerName, setCustomerName] = useState('')

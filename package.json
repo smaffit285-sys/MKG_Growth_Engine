@@ -8,6 +8,7 @@
         "build": "vite build",
         "lint": "eslint .",
         "test:intake": "node --test tests/website-intake.test.mjs",
+        "test:product": "node --test tests/product-shell.test.mjs",
         "preview": "vite preview"
     },
     "dependencies": {

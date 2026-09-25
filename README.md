@@ -1,7 +1,10 @@
-# Miami Knife Guy — CRM Growth Engine
+# Sharpener Growth Engine
 
-A full-stack CRM and growth-flywheel platform for Miami Knife Guy.  
-Features: customer management, referral tracking, reward ledger, review moderation, UGC moderation, analytics dashboard, and public landing pages.
+A standalone CRM and growth-flywheel product for professional knife sharpeners. Miami Knife Guy is the founding tenant and proving ground.
+
+The product is white-label ready: graphics, layout, colors, typography, logos, app icon, navigation, written content, service catalogue, pricing, invoice templates, offers, forms, automations, and customer journeys can be customized to each user’s needs.
+
+See `SHARPENER_GROWTH_ENGINE_OFFER.md` for the commercial product definition.
 
 ---
 

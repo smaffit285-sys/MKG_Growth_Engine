@@ -8,11 +8,15 @@ import {
   Clock3,
   FileText,
   Gauge,
+  Grid2X2,
   Images,
   LogOut,
   Menu,
   MessageSquareText,
   ReceiptText,
+  PackageSearch,
+  CircleHelp,
+  Palette,
   Scissors,
   Settings,
   Sparkles,
@@ -28,11 +32,14 @@ const NAV_GROUPS = [
   {
     label: 'Work',
     items: [
+      { path: '/launch', label: 'Launchpad', icon: Grid2X2 },
       { path: '/dashboard', label: 'Today', icon: Gauge },
       { path: '/field', label: 'New service', icon: Scissors, primary: true },
       { path: '/customers', label: 'Customers', icon: UsersRound },
       { path: '/invoices', label: 'Invoices', icon: ReceiptText },
       { path: '/commercial', label: 'Commercial', icon: Building2 },
+      { path: '/catalog', label: 'Catalogue', icon: PackageSearch },
+      { path: '/faq', label: 'FAQs', icon: CircleHelp },
     ],
   },
   {
@@ -54,6 +61,7 @@ const NAV_GROUPS = [
       { path: '/proof', label: 'Proof vault', icon: Trophy },
       { path: '/training', label: 'Training', icon: BookOpenCheck },
       { path: '/settings', label: 'Settings', icon: Settings },
+      { path: '/product', label: 'Product offer', icon: Palette },
     ],
   },
 ]
@@ -99,7 +107,7 @@ export default function Layout({ children }) {
           <Menu size={24} />
         </button>
         <div>
-          <p className="mobile-brand">MKG</p>
+          <p className="mobile-brand">GE</p>
           <p className="mobile-page">{pageName}</p>
         </div>
         <Link to="/field" className="mobile-new-service" aria-label="Start a new service"><Scissors size={20} /></Link>
@@ -109,10 +117,10 @@ export default function Layout({ children }) {
 
       <aside className={`app-sidebar ${mobileOpen ? 'app-sidebar-open' : ''}`}>
         <div className="brand-lockup">
-          <div className="brand-mark" aria-hidden="true">MKG</div>
+          <Link to="/launch" className="brand-mark" aria-label="Open Growth Engine launchpad">GE</Link>
           <div>
-            <p className="brand-name">Miami Knife Guy</p>
-            <p className="brand-product">Growth Engine</p>
+            <p className="brand-name">Growth Engine</p>
+            <p className="brand-product">Knife sharpener OS</p>
           </div>
           <button className="icon-button sidebar-close" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X size={22} /></button>
         </div>

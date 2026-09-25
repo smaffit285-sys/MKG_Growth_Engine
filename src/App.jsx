@@ -5,7 +5,11 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
 const Login = lazy(() => import('./pages/Login'))
+const Launchpad = lazy(() => import('./pages/Launchpad'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
+const ProductCatalog = lazy(() => import('./pages/ProductCatalog'))
+const FAQs = lazy(() => import('./pages/FAQs'))
+const ProductOffer = lazy(() => import('./pages/ProductOffer'))
 const ServiceDesk = lazy(() => import('./pages/ServiceDesk'))
 const Customers = lazy(() => import('./pages/Customers'))
 const CustomerDetail = lazy(() => import('./pages/CustomerDetail'))
@@ -34,7 +38,7 @@ function PageLoading() {
 
 function RootRedirect() {
   const { currentUser } = useAuth()
-  return <Navigate to={currentUser ? '/dashboard' : '/login'} replace />
+  return <Navigate to={currentUser ? '/launch' : '/login'} replace />
 }
 
 function ProtectedLayout({ children }) {
@@ -46,7 +50,11 @@ export default function App() {
     <Suspense fallback={<PageLoading />}><Routes>
       <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/launch" element={<ProtectedLayout><Launchpad /></ProtectedLayout>} />
       <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
+      <Route path="/catalog" element={<ProtectedLayout><ProductCatalog /></ProtectedLayout>} />
+      <Route path="/faq" element={<ProtectedLayout><FAQs /></ProtectedLayout>} />
+      <Route path="/product" element={<ProtectedLayout><ProductOffer /></ProtectedLayout>} />
       <Route path="/field" element={<ProtectedLayout><ServiceDesk /></ProtectedLayout>} />
       <Route path="/services/new" element={<ProtectedLayout><ServiceDesk /></ProtectedLayout>} />
       <Route path="/customers" element={<ProtectedLayout><Customers /></ProtectedLayout>} />
