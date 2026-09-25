@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="108" fill="#0a0a0a"/>
+  <path d="M112 344 344 112l56 56-232 232h-56v-56Z" fill="#f97316"/>
+  <path d="M154 358 358 154l18 18-204 204h-18v-18Z" fill="#f8fafc"/>
+  <path d="M304 96h92c11 0 20 9 20 20v92L304 96Z" fill="#22d3ee"/>
+  <text x="256" y="452" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="800" fill="#f8fafc">MKG</text>
+</svg>

@@ -7,9 +7,10 @@ import {
   orderBy,
   doc,
   updateDoc,
-  addDoc,
   serverTimestamp,
   getDoc,
+  increment,
+  writeBatch,
 } from 'firebase/firestore'
 
 const STATUS_COLORS = {
@@ -28,6 +29,7 @@ export default function UGC() {
   const [rewardAmount, setRewardAmount] = useState('15')
   const [rejectNotes, setRejectNotes] = useState({})
   const [showReject, setShowReject] = useState({})
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
     const q = query(collection(db, 'ugcSubmissions'), orderBy('createdAt', 'desc'))
@@ -36,9 +38,9 @@ export default function UGC() {
       setSubmissions(docs)
       setLoading(false)
       const ids = new Set(docs.map(d => d.customerId).filter(Boolean))
-      const custMap = { ...customers }
+      const custMap = {}
       await Promise.all(Array.from(ids).map(async id => {
-        if (!custMap[id]) {
+        if (id) {
           const d = await getDoc(doc(db, 'customers', id))
           if (d.exists()) custMap[id] = d.data()
         }
@@ -57,19 +59,20 @@ export default function UGC() {
     const amt = parseInt(amount) || 0
     setProcessing(p => ({ ...p, [sub.id]: true }))
     setModal(null)
+    setActionError('')
     try {
-      await updateDoc(doc(db, 'ugcSubmissions', sub.id), {
+      const submissionRef = doc(db, 'ugcSubmissions', sub.id)
+      const currentSubmission = await getDoc(submissionRef)
+      if (!currentSubmission.exists() || currentSubmission.data().rewardStatus === 'issued') return
+      const batch = writeBatch(db)
+      batch.update(submissionRef, {
         status: 'approved',
         rewardStatus: 'issued',
+        reviewedAt: serverTimestamp(),
       })
-      if (sub.customerId && amt > 0) {
-        const custDoc = await getDoc(doc(db, 'customers', sub.customerId))
-        if (custDoc.exists()) {
-          await updateDoc(doc(db, 'customers', sub.customerId), {
-            rewardsBalance: (custDoc.data().rewardsBalance || 0) + amt,
-          })
-        }
-        await addDoc(collection(db, 'rewardLedger'), {
+      if (sub.customerId && customers[sub.customerId] && amt > 0) {
+        batch.update(doc(db, 'customers', sub.customerId), { rewardsBalance: increment(amt), lastActivity: serverTimestamp() })
+        batch.set(doc(collection(db, 'rewardLedger')), {
           customerId: sub.customerId,
           type: 'ugc_approved',
           amount: amt,
@@ -79,8 +82,10 @@ export default function UGC() {
           createdAt: serverTimestamp(),
         })
       }
+      await batch.commit()
     } catch (e) {
       console.error(e)
+      setActionError('The post was not approved. Nothing was changed; please try again.')
     } finally {
       setProcessing(p => ({ ...p, [sub.id]: false }))
     }
@@ -88,6 +93,7 @@ export default function UGC() {
 
   const handleReject = async (sub) => {
     setProcessing(p => ({ ...p, [sub.id]: true }))
+    setActionError('')
     try {
       await updateDoc(doc(db, 'ugcSubmissions', sub.id), {
         status: 'rejected',
@@ -97,6 +103,7 @@ export default function UGC() {
       setShowReject(r => ({ ...r, [sub.id]: false }))
     } catch (e) {
       console.error(e)
+      setActionError('The post was not rejected. Please try again.')
     } finally {
       setProcessing(p => ({ ...p, [sub.id]: false }))
     }
@@ -108,6 +115,7 @@ export default function UGC() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold text-white mb-6">UGC Submissions</h1>
+      {actionError && <div role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-950/40 p-3 text-sm text-red-200">{actionError}</div>}
       <div className="flex gap-2 mb-6">
         {filters.map(f => (
           <button

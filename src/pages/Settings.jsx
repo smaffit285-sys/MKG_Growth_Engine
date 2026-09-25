@@ -98,10 +98,26 @@ export default function Settings() {
 
   const inputClass = 'w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 text-sm'
   const btnClass   = 'px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-50'
+  const dashboardUrl = typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : '/dashboard'
+  const fieldUrl = typeof window !== 'undefined' ? `${window.location.origin}/field` : '/field'
 
   return (
     <div className="p-6 space-y-6 max-w-2xl">
       <h1 className="text-2xl font-bold text-orange-400 tracking-tight">Settings</h1>
+
+      <Card title="Phone Shortcuts">
+        <div className="space-y-3 text-sm">
+          <div className="bg-zinc-800 rounded-xl p-3">
+            <p className="text-zinc-400 text-xs mb-1">Dashboard shortcut</p>
+            <a href={dashboardUrl} className="text-orange-400 break-all">{dashboardUrl}</a>
+          </div>
+          <div className="bg-zinc-800 rounded-xl p-3">
+            <p className="text-zinc-400 text-xs mb-1">Field service shortcut</p>
+            <a href={fieldUrl} className="text-orange-400 break-all">{fieldUrl}</a>
+          </div>
+          <p className="text-zinc-500 text-xs">Open either link on your phone, then use your browser's Add to Home Screen option. The app manifest starts directly on the dashboard and includes a New Service shortcut where supported.</p>
+        </div>
+      </Card>
 
       {/* Change Password */}
       <Card title="Change Admin Password">

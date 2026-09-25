@@ -1,115 +1,219 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { collection, limit, onSnapshot, orderBy, query, Timestamp } from 'firebase/firestore'
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+  ArrowRight,
+  Building2,
+  CircleDollarSign,
+  Clock3,
+  Images,
+  MessageSquareText,
+  ReceiptText,
+  Scissors,
+  Sparkles,
+  UserRoundPlus,
+  UsersRound,
+} from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 import { db } from '../lib/firebase'
-import { ACCOUNT_STATUS, COLLECTIONS, CONTENT_STAGES, INVOICE_STATUS, TRUST_STAGES } from '../lib/schema'
+import { ACCOUNT_STATUS, COLLECTIONS, CONTENT_STAGES, INVOICE_STATUS, PAYMENT_STATUS, REVIEW_STATUS, TRUST_STAGES } from '../lib/schema'
+
+const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
 function Skeleton({ className = '' }) {
-  return <div className={`animate-pulse bg-zinc-800 rounded-xl ${className}`} />
+  return <div className={`animate-pulse bg-slate-700/50 rounded-xl ${className}`} />
 }
 
-function StatCard({ label, value, sublabel, color = 'text-orange-400', loading, onClick }) {
+function MetricCard({ icon: Icon, label, value, note, tone = 'cyan', loading, onClick }) {
   return (
-    <button onClick={onClick} className="text-left bg-zinc-900 rounded-2xl border border-zinc-800 p-5 hover:border-orange-500/50 transition-colors">
-      {loading ? <><Skeleton className="h-4 w-28 mb-3" /><Skeleton className="h-8 w-16" /></> : <><p className="text-zinc-400 text-sm mb-1">{label}</p><p className={`text-3xl font-bold ${color}`}>{value}</p>{sublabel && <p className="text-zinc-500 text-xs mt-1">{sublabel}</p>}</>}
+    <button onClick={onClick} className="surface-card group min-h-40 p-5 text-left transition-transform hover:-translate-y-0.5">
+      {loading ? <><Skeleton className="h-10 w-10 mb-5" /><Skeleton className="h-8 w-24 mb-2" /><Skeleton className="h-4 w-32" /></> : <>
+        <div className={`metric-icon metric-icon-${tone}`}><Icon size={22} strokeWidth={1.8} /></div>
+        <p className="mt-5 text-3xl font-bold tracking-tight text-white">{value}</p>
+        <p className="mt-1 text-sm font-semibold text-slate-200">{label}</p>
+        <p className="mt-1 text-xs text-slate-500">{note}</p>
+      </>}
     </button>
+  )
+}
+
+function ActionRow({ icon: Icon, label, detail, value, route, navigate, urgent = false }) {
+  return (
+    <button onClick={() => navigate(route)} className={`action-row ${urgent && Number(value) > 0 ? 'action-row-urgent' : ''}`}>
+      <span className="action-row-icon"><Icon size={20} /></span>
+      <span className="min-w-0 flex-1"><strong>{label}</strong><small>{detail}</small></span>
+      <span className="action-row-value">{value}</span>
+      <ArrowRight size={17} className="text-slate-600" />
+    </button>
+  )
+}
+
+function MiniBars({ data }) {
+  const peak = Math.max(1, ...data.map(item => item.count))
+  return (
+    <div className="mini-chart" aria-label="New customers over the last fourteen days">
+      {data.map((item, index) => (
+        <div key={item.day} className="mini-chart-column" title={`${item.day}: ${item.count}`}>
+          <span className="mini-chart-value">{item.count || ''}</span>
+          <span className="mini-chart-bar" style={{ height: `${Math.max(8, (item.count / peak) * 100)}%` }} />
+          {(index === 0 || index === data.length - 1 || index === 6) && <small>{item.day}</small>}
+        </div>
+      ))}
+    </div>
   )
 }
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [data, setData] = useState({ customers: [], referrals: [], reviews: [], ugc: [], rewards: [], commercial: [], invoices: [], sessions: [], content: [], proof: [], training: [], events: [] })
+  const [data, setData] = useState({ customers: [], referrals: [], reviews: [], ugc: [], commercial: [], invoices: [], services: [], sessions: [], content: [], proof: [], training: [], events: [] })
   const [loading, setLoading] = useState(true)
+  const [dataWarning, setDataWarning] = useState('')
 
   useEffect(() => {
     const collections = [
-      ['customers', 'customers', null], ['referrals', 'referrals', 100], ['reviews', 'reviewSubmissions', 100], ['ugc', 'ugcSubmissions', 100], ['rewards', 'rewardLedger', 200],
-      ['commercial', COLLECTIONS.COMMERCIAL_ACCOUNTS, 100], ['invoices', COLLECTIONS.INVOICES, 100], ['sessions', COLLECTIONS.SHARPENING_SESSIONS, 100], ['content', COLLECTIONS.CONTENT_PIPELINE, 100], ['proof', COLLECTIONS.PROOF_ASSETS, 100], ['training', COLLECTIONS.TRAINING_SESSIONS, 100], ['events', COLLECTIONS.CUSTOMER_EVENTS, 50],
+      ['customers', COLLECTIONS.CUSTOMERS, 500],
+      ['referrals', 'referrals', 100],
+      ['reviews', 'reviewSubmissions', 100],
+      ['ugc', 'ugcSubmissions', 100],
+      ['commercial', COLLECTIONS.COMMERCIAL_ACCOUNTS, 100],
+      ['invoices', COLLECTIONS.INVOICES, 100],
+      ['services', COLLECTIONS.SERVICE_RECORDS, 100],
+      ['sessions', COLLECTIONS.SHARPENING_SESSIONS, 100],
+      ['content', COLLECTIONS.CONTENT_PIPELINE, 100],
+      ['proof', COLLECTIONS.PROOF_ASSETS, 100],
+      ['training', COLLECTIONS.TRAINING_SESSIONS, 100],
+      ['events', COLLECTIONS.CUSTOMER_EVENTS, 50],
     ]
     let resolved = 0
+    let failures = 0
+    const finishOne = () => {
+      resolved += 1
+      if (resolved >= collections.length) {
+        setLoading(false)
+        if (failures) setDataWarning(`${failures} dashboard source${failures === 1 ? '' : 's'} could not be loaded. The available totals are shown.`)
+      }
+    }
     const unsubs = collections.map(([key, name, cap]) => {
-      const q = cap ? query(collection(db, name), orderBy('createdAt', 'desc'), limit(cap)) : query(collection(db, name), orderBy('createdAt', 'desc'))
-      return onSnapshot(q, snap => {
-        setData(prev => ({ ...prev, [key]: snap.docs.map(d => ({ id: d.id, ...d.data() })) }))
-        resolved += 1
-        if (resolved >= collections.length) setLoading(false)
-      }, err => {
-        console.error(`Dashboard listener failed for ${name}`, err)
-        resolved += 1
-        if (resolved >= collections.length) setLoading(false)
+      const source = query(collection(db, name), orderBy('createdAt', 'desc'), limit(cap))
+      return onSnapshot(source, snapshot => {
+        setData(previous => ({ ...previous, [key]: snapshot.docs.map(document => ({ id: document.id, ...document.data() })) }))
+        finishOne()
+      }, error => {
+        console.error(`Dashboard listener failed for ${name}`, error)
+        failures += 1
+        finishOne()
       })
     })
-    return () => unsubs.forEach(u => u())
+    return () => unsubs.forEach(unsubscribe => unsubscribe())
   }, [])
 
   const metrics = useMemo(() => {
-    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
-    const weekAgoSec = Timestamp.fromDate(weekAgo).seconds
-    const activeCommercial = data.commercial.filter(a => a.accountStatus === ACCOUNT_STATUS.ACTIVE).length
-    const pipelineValue = data.commercial.filter(a => ![ACCOUNT_STATUS.LOST, ACCOUNT_STATUS.PAUSED].includes(a.accountStatus)).reduce((s, a) => s + Number(a.monthlyValue || 0), 0)
-    const proposals = data.commercial.filter(a => a.trustStage === TRUST_STAGES.PROPOSAL_SENT).length
-    const invoiceDrafts = data.invoices.filter(i => i.status === INVOICE_STATUS.DRAFT).length
-    const invoiceOutstanding = data.invoices.filter(i => ![INVOICE_STATUS.PAID, INVOICE_STATUS.VOID].includes(i.status)).reduce((s, i) => s + Number(i.total || 0), 0)
-    const avgQuality = data.sessions.length ? Math.round(data.sessions.reduce((s, x) => s + Number(x.qualityScore || 0), 0) / data.sessions.length) : 0
-    const avgTraining = data.training.length ? Math.round(data.training.reduce((s, x) => s + Number(x.score || 0), 0) / data.training.length) : 0
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    const weekAgoSeconds = Timestamp.fromDate(weekAgo).seconds
+    const today = new Date().toISOString().slice(0, 10)
+    const outstanding = data.invoices.filter(invoice => ![INVOICE_STATUS.PAID, INVOICE_STATUS.VOID].includes(invoice.status) && invoice.paymentStatus !== PAYMENT_STATUS.PAID)
     return {
-      totalCustomers: data.customers.length,
-      newThisWeek: data.customers.filter(c => c.createdAt?.seconds >= weekAgoSec).length,
-      activeCommercial,
-      pipelineValue,
-      proposals,
-      invoiceOutstanding,
-      invoiceDrafts,
-      sessions: data.sessions.length,
-      avgQuality,
-      avgTraining,
-      contentIdeas: data.content.filter(c => c.stage !== CONTENT_STAGES.PUBLISHED).length,
-      proofAssets: data.proof.length,
-      reviewsPending: data.reviews.filter(r => !r.approved && !r.rejected).length,
-      ugcPending: data.ugc.filter(u => !u.approved && !u.rejected).length,
+      customers: data.customers.length,
+      newThisWeek: data.customers.filter(customer => customer.createdAt?.seconds >= weekAgoSeconds).length,
+      services: data.services.length,
+      outstandingValue: outstanding.reduce((sum, invoice) => sum + Number(invoice.balanceDue || invoice.total || 0), 0),
+      unpaidInvoices: outstanding.length,
+      activeCommercial: data.commercial.filter(account => account.accountStatus === ACCOUNT_STATUS.ACTIVE).length,
+      pipelineValue: data.commercial.filter(account => ![ACCOUNT_STATUS.LOST, ACCOUNT_STATUS.PAUSED].includes(account.accountStatus)).reduce((sum, account) => sum + Number(account.monthlyValue || 0), 0),
+      proposals: data.commercial.filter(account => account.trustStage === TRUST_STAGES.PROPOSAL_SENT).length,
+      reviewFollowUps: data.services.filter(service => [REVIEW_STATUS.FOLLOW_UP_NEEDED, REVIEW_STATUS.NOT_REQUESTED].includes(service.reviewStatus)).length,
+      dueFollowUps: data.customers.filter(customer => customer.nextFollowUpDate && customer.nextFollowUpDate <= today).length,
+      reviewsPending: data.reviews.filter(review => (review.status || 'pending') === 'pending').length,
+      ugcPending: data.ugc.filter(post => (post.status || 'pending') === 'pending').length,
+      contentIdeas: data.content.filter(content => content.stage !== CONTENT_STAGES.PUBLISHED).length,
     }
   }, [data])
 
-  const chartData = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date(); d.setDate(d.getDate() - (13 - i)); d.setHours(0, 0, 0, 0)
-    const nextD = new Date(d); nextD.setDate(nextD.getDate() + 1)
-    const count = data.customers.filter(c => c.createdAt?.seconds >= Timestamp.fromDate(d).seconds && c.createdAt?.seconds < Timestamp.fromDate(nextD).seconds).length
-    return { day: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), count }
-  })
+  const chartData = useMemo(() => Array.from({ length: 14 }, (_, index) => {
+    const date = new Date()
+    date.setDate(date.getDate() - (13 - index))
+    date.setHours(0, 0, 0, 0)
+    const nextDate = new Date(date)
+    nextDate.setDate(nextDate.getDate() + 1)
+    const count = data.customers.filter(customer => customer.createdAt?.seconds >= Timestamp.fromDate(date).seconds && customer.createdAt?.seconds < Timestamp.fromDate(nextDate).seconds).length
+    return { day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), count }
+  }), [data.customers])
 
-  const activityItems = [...data.events.slice(0, 10).map(e => ({ ts: e.createdAt?.seconds || 0, icon: '🕒', text: e.eventType, badge: 'event' })), ...data.reviews.slice(0, 5).map(r => ({ ts: r.createdAt?.seconds || 0, icon: '⭐', text: `Review from ${r.name || 'customer'}`, badge: 'review' })), ...data.ugc.slice(0, 5).map(u => ({ ts: u.createdAt?.seconds || 0, icon: '📸', text: `UGC from ${u.name || 'customer'}`, badge: 'ugc' }))].sort((a, b) => b.ts - a.ts).slice(0, 12)
+  const activity = useMemo(() => [
+    ...data.events.slice(0, 8).map(event => ({ timestamp: event.createdAt?.seconds || 0, text: String(event.eventType || 'Activity').replaceAll('_', ' '), type: 'event' })),
+    ...data.reviews.slice(0, 4).map(review => ({ timestamp: review.createdAt?.seconds || 0, text: `Review submitted by ${review.name || 'a customer'}`, type: 'review' })),
+    ...data.ugc.slice(0, 4).map(post => ({ timestamp: post.createdAt?.seconds || 0, text: `Customer post from ${post.name || post.platform || 'social media'}`, type: 'post' })),
+  ].sort((a, b) => b.timestamp - a.timestamp).slice(0, 8), [data.events, data.reviews, data.ugc])
+
+  const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening'
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-        <div><h1 className="text-2xl font-bold text-orange-400 tracking-tight">Miami Knife Guy — Command Dashboard</h1><p className="text-zinc-400 text-sm mt-1">B2B pipeline, field operations, authority, training, revenue, and proof.</p></div>
-        <button onClick={() => navigate('/invoices')} className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-4 py-2 text-sm font-medium">Create Invoice</button>
+    <div className="dashboard-page mx-auto max-w-[1500px] space-y-6 p-4 md:p-7 lg:p-9">
+      <PageHeader
+        eyebrow="Today at MKG"
+        title={`${greeting}.`}
+        description="Start with the next customer-facing action. Everything else can wait."
+        actions={<>
+          <button onClick={() => navigate('/field')} className="btn-primary"><Scissors size={18} /> Start a service</button>
+          <button onClick={() => navigate('/customers')} className="btn-secondary"><UsersRound size={18} /> Find a customer</button>
+        </>}
+      />
+
+      {dataWarning && <div role="status" className="rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">{dataWarning}</div>}
+
+      <section aria-labelledby="scoreboard-title">
+        <div className="section-heading"><div><p className="page-eyebrow">At a glance</p><h2 id="scoreboard-title">The numbers that matter now</h2></div></div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <MetricCard icon={UsersRound} label="Customers" value={metrics.customers} note={`${metrics.newThisWeek} added this week`} loading={loading} onClick={() => navigate('/customers')} />
+          <MetricCard icon={Scissors} label="Recent services" value={metrics.services} note="Latest 100 field records" tone="pink" loading={loading} onClick={() => navigate('/field')} />
+          <MetricCard icon={CircleDollarSign} label="Still to collect" value={money.format(metrics.outstandingValue)} note={`${metrics.unpaidInvoices} unpaid invoice${metrics.unpaidInvoices === 1 ? '' : 's'}`} tone="warm" loading={loading} onClick={() => navigate('/invoices')} />
+          <MetricCard icon={Building2} label="Commercial accounts" value={metrics.activeCommercial} note={`${money.format(metrics.pipelineValue)}/month pipeline`} tone="violet" loading={loading} onClick={() => navigate('/commercial')} />
+        </div>
+      </section>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,.65fr)]">
+        <section className="surface-card p-5 md:p-6" aria-labelledby="priority-title">
+          <div className="section-heading"><div><p className="page-eyebrow">Next actions</p><h2 id="priority-title">What needs attention</h2></div><Clock3 size={22} className="text-cyan-300" /></div>
+          <div className="mt-4 grid gap-2">
+            <ActionRow icon={ReceiptText} label="Collect unpaid invoices" detail="Open balances ready for follow-up" value={metrics.unpaidInvoices} route="/invoices" navigate={navigate} urgent />
+            <ActionRow icon={MessageSquareText} label="Ask for reviews" detail="Completed services without a review request" value={metrics.reviewFollowUps} route="/field" navigate={navigate} urgent />
+            <ActionRow icon={UsersRound} label="Follow up with customers" detail="Follow-up date is today or earlier" value={metrics.dueFollowUps} route="/customers" navigate={navigate} urgent />
+            <ActionRow icon={Building2} label="Commercial proposals" detail="Proposals waiting on the next move" value={metrics.proposals} route="/commercial" navigate={navigate} />
+            <ActionRow icon={Sparkles} label="Approve customer proof" detail="Reviews and social posts awaiting approval" value={metrics.reviewsPending + metrics.ugcPending} route="/reviews" navigate={navigate} />
+          </div>
+        </section>
+
+        <section className="surface-card p-5 md:p-6" aria-labelledby="growth-title">
+          <div className="section-heading"><div><p className="page-eyebrow">Acquisition</p><h2 id="growth-title">New customers</h2></div><UserRoundPlus size={22} className="text-pink-300" /></div>
+          {loading ? <Skeleton className="mt-5 h-48 w-full" /> : <MiniBars data={chartData} />}
+        </section>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-        <StatCard label="Customers" value={metrics.totalCustomers} sublabel={`${metrics.newThisWeek} new this week`} loading={loading} onClick={() => navigate('/customers')} />
-        <StatCard label="Active B2B" value={metrics.activeCommercial} sublabel={`$${metrics.pipelineValue}/mo pipeline`} color="text-green-400" loading={loading} onClick={() => navigate('/commercial')} />
-        <StatCard label="Proposals" value={metrics.proposals} sublabel="Commercial trust stage" color="text-blue-400" loading={loading} onClick={() => navigate('/commercial')} />
-        <StatCard label="Outstanding" value={`$${metrics.invoiceOutstanding}`} sublabel={`${metrics.invoiceDrafts} drafts`} color="text-yellow-400" loading={loading} onClick={() => navigate('/invoices')} />
-        <StatCard label="Quality Avg" value={metrics.avgQuality} sublabel={`${metrics.sessions} sessions`} color="text-purple-400" loading={loading} onClick={() => navigate('/sessions')} />
-        <StatCard label="Training Avg" value={metrics.avgTraining} sublabel="Technician system" color="text-pink-400" loading={loading} onClick={() => navigate('/training')} />
-        <StatCard label="Content Queue" value={metrics.contentIdeas} sublabel="Unpublished assets" loading={loading} onClick={() => navigate('/content')} />
-        <StatCard label="Proof Assets" value={metrics.proofAssets} sublabel="Trust vault" color="text-green-400" loading={loading} onClick={() => navigate('/proof')} />
-        <StatCard label="Reviews Pending" value={metrics.reviewsPending} color="text-purple-400" loading={loading} onClick={() => navigate('/reviews')} />
-        <StatCard label="UGC Pending" value={metrics.ugcPending} color="text-pink-400" loading={loading} onClick={() => navigate('/ugc')} />
-      </div>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,.8fr)]">
+        <section className="surface-card p-5 md:p-6" aria-labelledby="activity-title">
+          <div className="section-heading"><div><p className="page-eyebrow">Live pulse</p><h2 id="activity-title">Recent activity</h2></div></div>
+          <div className="mt-4 divide-y divide-sky-100/10">
+            {activity.length === 0 ? <p className="py-8 text-sm text-slate-500">Activity will appear here as customers move through the system.</p> : activity.map((item, index) => (
+              <div key={`${item.timestamp}-${index}`} className="flex items-center gap-3 py-3.5">
+                <span className="activity-dot" />
+                <span className="flex-1 text-sm capitalize text-slate-300">{item.text}</span>
+                <time className="text-xs text-slate-600">{item.timestamp ? new Date(item.timestamp * 1000).toLocaleDateString() : 'Today'}</time>
+              </div>
+            ))}
+          </div>
+        </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-zinc-900 rounded-2xl border border-zinc-800 p-5"><h2 className="text-orange-400 font-semibold mb-4">New Customers — Last 14 Days</h2>{loading ? <Skeleton className="h-48 w-full" /> : <ResponsiveContainer width="100%" height={220}><BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" /><XAxis dataKey="day" tick={{ fill: '#a1a1aa', fontSize: 11 }} interval={3} /><YAxis tick={{ fill: '#a1a1aa', fontSize: 11 }} /><Tooltip contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8 }} labelStyle={{ color: '#f97316' }} /><Bar dataKey="count" fill="#f97316" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer>}</div>
-        <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-5"><h2 className="text-orange-400 font-semibold mb-4">Priority Actions</h2><div className="space-y-2"><Action label="Follow up commercial proposals" value={metrics.proposals} route="/commercial" navigate={navigate} /><Action label="Send or finalize draft invoices" value={metrics.invoiceDrafts} route="/invoices" navigate={navigate} /><Action label="Moderate reviews" value={metrics.reviewsPending} route="/reviews" navigate={navigate} /><Action label="Moderate UGC" value={metrics.ugcPending} route="/ugc" navigate={navigate} /></div></div>
+        <section className="surface-card p-5 md:p-6" aria-labelledby="growth-tools-title">
+          <div className="section-heading"><div><p className="page-eyebrow">Keep growing</p><h2 id="growth-tools-title">Growth tools</h2></div></div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button className="quick-tool" onClick={() => navigate('/referrals')}><UserRoundPlus size={21} /><span>Referrals</span></button>
+            <button className="quick-tool" onClick={() => navigate('/reviews')}><MessageSquareText size={21} /><span>Reviews</span><small>{metrics.reviewsPending} pending</small></button>
+            <button className="quick-tool" onClick={() => navigate('/ugc')}><Images size={21} /><span>Customer posts</span><small>{metrics.ugcPending} pending</small></button>
+            <button className="quick-tool" onClick={() => navigate('/content')}><Sparkles size={21} /><span>Content</span><small>{metrics.contentIdeas} ideas</small></button>
+          </div>
+        </section>
       </div>
-
-      <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-5"><h2 className="text-orange-400 font-semibold mb-4">Recent Activity</h2>{activityItems.length === 0 ? <p className="text-zinc-500 text-sm">No activity yet.</p> : <div className="space-y-2">{activityItems.map((item, i) => <div key={i} className="flex items-center justify-between p-3 bg-zinc-800 rounded-xl"><div className="flex items-center gap-3"><span>{item.icon}</span><span className="text-zinc-300 text-sm">{item.text}</span></div><span className="text-xs text-zinc-500">{item.ts ? new Date(item.ts * 1000).toLocaleDateString() : '—'}</span></div>)}</div>}</div>
     </div>
   )
-}
-
-function Action({ label, value, route, navigate }) {
-  return <button onClick={() => navigate(route)} className="w-full flex items-center justify-between p-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm"><span className="text-zinc-300">{label}</span><span className="text-orange-400 font-bold">{value}</span></button>
 }

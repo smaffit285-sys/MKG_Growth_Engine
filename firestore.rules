@@ -96,6 +96,12 @@ service cloud.firestore {
       allow update, delete: if isOwnerOrAdmin();
     }
 
+    match /serviceRecords/{serviceId} {
+      allow read: if isOperator();
+      allow create, update: if isWriter();
+      allow delete: if isOwnerOrAdmin();
+    }
+
     match /invoices/{invoiceId} {
       allow read: if isOperator();
       allow create, update: if isWriter();
