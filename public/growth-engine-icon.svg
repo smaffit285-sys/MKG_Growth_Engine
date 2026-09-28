@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Sharpener Growth Engine</title>
+  <defs>
+    <linearGradient id="edge" x1="80" y1="420" x2="420" y2="80" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff4fa3"/>
+      <stop offset="1" stop-color="#38ddff"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#05070d"/>
+  <rect x="18" y="18" width="476" height="476" rx="96" fill="none" stroke="#38ddff" stroke-opacity=".24" stroke-width="4"/>
+  <path d="M104 350 346 108l62 62-242 242h-62v-62Z" fill="url(#edge)"/>
+  <path d="m145 363 214-214 20 20-214 214h-20v-20Z" fill="#f8fafc"/>
+  <path d="M291 112h104c9 0 17 8 17 17v104L291 112Z" fill="#38ddff"/>
+  <path d="M331 92v-34M382 113l24-24M403 164h34" fill="none" stroke="#ffc857" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="120" cy="118" r="27" fill="#ff4fa3" opacity=".9"/>
+  <path d="M108 119h24M120 107v24" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+</svg>

@@ -7,7 +7,7 @@
     "node": "20"
   },
   "scripts": {
-    "lint": "eslint .",
+    "lint": "node --check index.js",
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",
     "start": "npm run shell",

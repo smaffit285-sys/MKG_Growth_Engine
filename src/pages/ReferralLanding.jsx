@@ -6,8 +6,9 @@ import {
   query,
   where,
   getDocs,
-  addDoc,
+  doc,
   serverTimestamp,
+  writeBatch,
 } from 'firebase/firestore'
 import { QRCodeSVG } from 'qrcode.react'
 
@@ -23,7 +24,7 @@ function generateReferralCode() {
 export default function ReferralLanding() {
   const { referralCode } = useParams()
   const [referrer, setReferrer] = useState(null)
-  const [loadingReferrer, setLoadingReferrer] = useState(true)
+  const [loadingReferrer, setLoadingReferrer] = useState(Boolean(referralCode))
   const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', address: '' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -45,7 +46,6 @@ export default function ReferralLanding() {
       }
     }
     if (referralCode) lookupReferrer()
-    else setLoadingReferrer(false)
   }, [referralCode])
 
   const handleChange = (e) => {
@@ -70,7 +70,9 @@ export default function ReferralLanding() {
         return
       }
       const newCode = generateReferralCode()
-      const customerRef = await addDoc(collection(db, 'customers'), {
+      const batch = writeBatch(db)
+      const customerRef = doc(collection(db, 'customers'))
+      batch.set(customerRef, {
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.email,
@@ -89,7 +91,8 @@ export default function ReferralLanding() {
       })
       let referralDocId = null
       if (referrer) {
-        const referralRef = await addDoc(collection(db, 'referrals'), {
+        const referralRef = doc(collection(db, 'referrals'))
+        batch.set(referralRef, {
           referringCustomerId: referrer.id,
           referredCustomerId: customerRef.id,
           referralCode: referralCode,
@@ -103,7 +106,7 @@ export default function ReferralLanding() {
           createdAt: serverTimestamp(),
         })
         referralDocId = referralRef.id
-        await addDoc(collection(db, 'rewardLedger'), {
+        batch.set(doc(collection(db, 'rewardLedger')), {
           customerId: referrer.id,
           type: 'referral_pending',
           amount: 5,
@@ -113,6 +116,7 @@ export default function ReferralLanding() {
           createdAt: serverTimestamp(),
         })
       }
+      await batch.commit()
       setSuccess({ referralCode: newCode, firstName: form.firstName })
     } catch (e) {
       console.error(e)
@@ -133,10 +137,11 @@ export default function ReferralLanding() {
   if (success) {
     const referralUrl = `https://miamiknifeguy.com/r/${success.referralCode}`
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-        <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full text-center shadow-xl">
+      <div className="public-shell">
+        <div className="public-card text-center">
           <div className="text-5xl mb-4">🎉</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Welcome, {success.firstName}!</h2>
+          <p className="page-eyebrow mb-2">Welcome to the sharp side</p>
+          <h2 className="font-['Barlow_Condensed'] text-4xl uppercase tracking-wide text-white mb-2">Welcome, {success.firstName}!</h2>
           <p className="text-gray-400 mb-6">You are now part of the Miami Knife Guy family. Share your code to earn rewards!</p>
           <div className="bg-gray-800 rounded-xl p-4 mb-6">
             <p className="text-gray-400 text-sm mb-1">Your Referral Code</p>
@@ -152,10 +157,11 @@ export default function ReferralLanding() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full shadow-xl">
+    <div className="public-shell">
+      <div className="public-card">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-orange-500 mb-2">Miami Knife Guy</h1>
+          <p className="page-eyebrow mb-2">Miami Knife Guy</p>
+          <h1 className="font-['Barlow_Condensed'] text-5xl uppercase tracking-wide leading-none text-white mb-3">A sharper introduction.</h1>
           {referrer ? (
             <p className="text-white text-lg">
               <span className="text-orange-400 font-semibold">{referrer.firstName}</span> sent you a free knife sharpening!
@@ -226,9 +232,9 @@ export default function ReferralLanding() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-800 text-white font-bold py-3 rounded-lg transition-colors"
+            className="btn-primary w-full disabled:opacity-50"
           >
-            {submitting ? 'Registering...' : 'Claim My Free Sharpening'}
+            {submitting ? 'Claiming your spot…' : 'Claim my free sharpening'}
           </button>
         </form>
       </div>

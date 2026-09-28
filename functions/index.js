@@ -31,6 +31,10 @@ const OWNER_PHONE = process.env.OWNER_PHONE || '+13059095773';
 exports.sendWelcomeSMS = onDocumentCreated('customers/{customerId}', async (event) => {
     const customer = event.data.data();
     if (!customer) return;
+    if (customer.leadSource !== 'public_register') {
+          console.log('Skipping registration welcome SMS for non-registration customer');
+          return;
+    }
 
                                              const { phone, firstName, lastName, referredBy } = customer;
 
