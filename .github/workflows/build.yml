@@ -16,6 +16,12 @@ jobs:
         with:
           node-version: '20'
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Test CRM intake
+        run: npm run test:intake
+      - name: Test product workflows
+        run: npm run test:product
       - name: Build
         run: npm run build
