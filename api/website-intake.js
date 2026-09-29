@@ -5,6 +5,17 @@ import { writeFile } from 'node:fs/promises'
 
 const EVENT_TYPES = new Set(['form_submission', 'booking_request', 'chat_turn', 'review_submission', 'referral_request'])
 
+export function oidcVerificationOptions(env = process.env) {
+  const scope = env.VERCEL_OIDC_SCOPE || 'smaffit285-sys-projects'
+  return {
+    issuer: env.VERCEL_OIDC_ISSUER || `https://oidc.vercel.com/${scope}`,
+    audience: env.VERCEL_OIDC_AUDIENCE || `https://vercel.com/${scope}`,
+    ownerId: env.VERCEL_OIDC_OWNER_ID || 'team_EszcbP2rHpd7bmOXMxepvWAC',
+    projectId: env.WEBSITE_VERCEL_PROJECT_ID || 'prj_a8w26HeULu4jubzLet2M4o7aKkyv',
+    environment: (env.WEBSITE_VERCEL_ENVIRONMENTS || 'preview,production').split(',').map(value => value.trim()).filter(Boolean),
+  }
+}
+
 export function normalizePhone(value) {
   const digits = String(value || '').replace(/\D/g, '')
   return digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits.slice(0, 20)
@@ -50,9 +61,11 @@ async function sendLeadNotification(body, customerId) {
   if (!apiKey || body.eventType === 'chat_turn') return { configured: Boolean(apiKey), sent: false }
   const recipients = (process.env.LEAD_NOTIFICATION_TO || 'miamiknifeguy@gmail.com,smaffit@miamiknifeguy.com')
     .split(',').map(value => value.trim()).filter(Boolean)
-  const from = process.env.LEAD_NOTIFICATION_FROM || 'MKG Website <bookings@miamiknifeguy.com>'
+  const sendingDomain = process.env.RESEND_EMAIL_DOMAIN || 'miamiknifeguy.com'
+  const brandShortName = process.env.BUSINESS_SHORTHAND || 'MKG'
+  const from = process.env.LEAD_NOTIFICATION_FROM || `${brandShortName} Website <bookings@${sendingDomain}>`
   const contactName = cleanString(body.contact?.name || body.contact?.business || 'Website visitor', 100)
-  const subject = `[MKG Website] ${cleanString(body.eventType, 80).replaceAll('_', ' ')} — ${contactName}`
+  const subject = `[${brandShortName} Website] ${cleanString(body.eventType, 80).replaceAll('_', ' ')} — ${contactName}`
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -141,13 +154,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   const supplied = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '')
   try {
-    await verifyVercelOidcToken(supplied, {
-      issuer: 'https://oidc.vercel.com/smaffit285-sys-projects',
-      audience: 'https://vercel.com/smaffit285-sys-projects',
-      ownerId: 'team_EszcbP2rHpd7bmOXMxepvWAC',
-      projectId: 'prj_a8w26HeULu4jubzLet2M4o7aKkyv',
-      environment: ['preview', 'production'],
-    })
+    await verifyVercelOidcToken(supplied, oidcVerificationOptions())
   } catch {
     return res.status(401).json({ error: 'Unauthorized' })
   }

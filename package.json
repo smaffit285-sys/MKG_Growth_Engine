@@ -9,23 +9,25 @@
         "lint": "eslint .",
         "test:intake": "node --test tests/website-intake.test.mjs",
         "test:product": "node --test tests/product-shell.test.mjs",
+        "test:tenant": "node --test tests/tenant-config.test.mjs",
+        "test": "npm run test:intake && npm run test:product && npm run test:tenant",
         "preview": "vite preview"
     },
     "dependencies": {
         "@vercel/oidc": "^3.8.9",
-        "firebase": "^10.12.2",
-        "firebase-admin": "^14.4.0",
+        "firebase": "^12.19.0",
+        "firebase-admin": "^14.5.0",
         "lucide-react": "^1.28.0",
         "qrcode.react": "^3.1.0",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
-        "react-router-dom": "^6.23.1"
+        "react-router-dom": "^7.18.4"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/react": "^18.3.3",
         "@types/react-dom": "^18.3.0",
-        "@vitejs/plugin-react": "^4.3.0",
+        "@vitejs/plugin-react": "^6.1.1",
         "autoprefixer": "^10.4.19",
         "eslint": "^10.8.0",
         "eslint-plugin-react-hooks": "^7.1.1",
@@ -33,6 +35,9 @@
         "globals": "^17.9.0",
         "postcss": "^8.4.38",
         "tailwindcss": "^3.4.4",
-        "vite": "^5.3.1"
+        "vite": "^8.3.1"
+    },
+    "overrides": {
+        "uuid": "^11.1.1"
     }
 }

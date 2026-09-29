@@ -102,7 +102,7 @@ export default function Invoices() {
     const billTo = invoiceType === INVOICE_TYPES.B2B ? businessName || customerName : customerName
     const primary = paymentOptions[primaryPaymentMethod]
     const paymentLine = primary?.value ? `${primary.label}: ${primary.value}` : `${primary?.label || 'Payment'} details available on invoice.`
-    return `Miami Knife Guy invoice for ${billTo || 'customer'} — total $${totals.total.toFixed(2)}, balance due $${totals.balanceDue.toFixed(2)}. Preferred payment: ${paymentLine}`
+    return `${MKG_BRAND.businessName} invoice for ${billTo || 'customer'} — total $${totals.total.toFixed(2)}, balance due $${totals.balanceDue.toFixed(2)}. Preferred payment: ${paymentLine}`
   }, [invoiceType, businessName, customerName, totals.total, totals.balanceDue, paymentOptions, primaryPaymentMethod])
 
   const filteredInvoices = useMemo(() => {
@@ -111,7 +111,7 @@ export default function Invoices() {
   }, [invoiceHistory, invoiceSearch])
 
   function invoiceTextFallback() {
-    return `Miami Knife Guy invoice balance due: $${totals.balanceDue.toFixed(2)}`
+    return `${MKG_BRAND.businessName} invoice balance due: $${totals.balanceDue.toFixed(2)}`
   }
 
   function updateItem(index, field, value) {
@@ -162,7 +162,7 @@ export default function Invoices() {
   }
 
   async function saveInvoice() {
-    const invoiceNumber = `MKG-${Date.now()}`
+    const invoiceNumber = `${MKG_BRAND.shorthand}-${Date.now()}`
     await addDoc(collection(db, COLLECTIONS.INVOICES), {
       invoiceNumber,
       invoiceType,
@@ -199,7 +199,7 @@ export default function Invoices() {
   }
 
   const smsHref = `sms:${customerPhone || ''}?&body=${encodeURIComponent(invoiceText)}`
-  const emailHref = `mailto:${customerEmail || ''}?subject=${encodeURIComponent('Miami Knife Guy Invoice')}&body=${encodeURIComponent(invoiceText)}`
+  const emailHref = `mailto:${customerEmail || ''}?subject=${encodeURIComponent(`${MKG_BRAND.businessName} Invoice`)}&body=${encodeURIComponent(invoiceText)}`
 
   return (
     <div className="p-4 md:p-7 lg:p-9 max-w-[1400px] mx-auto space-y-6">

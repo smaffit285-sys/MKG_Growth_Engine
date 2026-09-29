@@ -15,6 +15,7 @@ import {
   UsersRound,
 } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
+import { BRAND } from '../lib/brand'
 import { db } from '../lib/firebase'
 import { ACCOUNT_STATUS, COLLECTIONS, CONTENT_STAGES, INVOICE_STATUS, PAYMENT_STATUS, REVIEW_STATUS, TRUST_STAGES } from '../lib/schema'
 
@@ -151,7 +152,7 @@ export default function Dashboard() {
   return (
     <div className="dashboard-page mx-auto max-w-[1500px] space-y-6 p-4 md:p-7 lg:p-9">
       <PageHeader
-        eyebrow="Today at MKG"
+        eyebrow={`Today at ${BRAND.shorthand}`}
         title={`${greeting}.`}
         description="Start with the next customer-facing action. Everything else can wait."
         actions={<>

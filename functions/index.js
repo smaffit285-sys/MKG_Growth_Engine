@@ -24,7 +24,16 @@ async function sendSMS(to, body) {
     await client.messages.create({ to, from, body });
 }
 
-const OWNER_PHONE = process.env.OWNER_PHONE || '+13059095773';
+const BRAND = Object.freeze({
+    businessName: process.env.BUSINESS_NAME || 'Miami Knife Guy',
+    shorthand: process.env.BUSINESS_SHORTHAND || 'MKG',
+    ownerName: process.env.OWNER_NAME || 'Sean',
+    ownerPhone: process.env.OWNER_PHONE || '+13059095773',
+    ownerPhoneDisplay: process.env.OWNER_PHONE_DISPLAY || '(305) 909-5773',
+    publicUrl: (process.env.PUBLIC_WEBSITE_URL || 'https://miamiknifeguy.com').replace(/\/+$/, ''),
+});
+
+const OWNER_PHONE = BRAND.ownerPhone;
 
 // ─── Function 1: sendWelcomeSMS ───────────────────────────────────────────────
 // Trigger: new customer document created
@@ -43,7 +52,7 @@ exports.sendWelcomeSMS = onDocumentCreated('customers/{customerId}', async (even
                                                    try {
                                                            await sendSMS(
                                                                      phone,
-                                                                     'Welcome to Miami Knife Guy! Your free sharpening is confirmed. We\'ll be in touch to schedule. Reply STOP to opt out.'
+                                                                     `Welcome to ${BRAND.businessName}! Your free sharpening is confirmed. We\'ll be in touch to schedule. Reply STOP to opt out.`
                                                                    );
                                                            console.log(`Welcome SMS sent to ${phone}`);
                                                    } catch (err) {
@@ -56,7 +65,7 @@ exports.sendWelcomeSMS = onDocumentCreated('customers/{customerId}', async (even
                                                    const referralInfo = referredBy || 'direct';
                                                    await sendSMS(
                                                            OWNER_PHONE,
-                                                           `New MKG lead: ${firstName || ''} ${lastName || ''} | ${phone || 'no phone'} | Referred by: ${referralInfo}`
+                                                           `New ${BRAND.shorthand} lead: ${firstName || ''} ${lastName || ''} | ${phone || 'no phone'} | Referred by: ${referralInfo}`
                                                          );
                                                    console.log('Owner notification sent');
                                              } catch (err) {
@@ -99,7 +108,7 @@ exports.sendReferralCompleteSMS = onDocumentUpdated('referrals/{referralId}', as
 
       await sendSMS(
               phone,
-              `Your MKG referral was completed! $20 has been added to your rewards balance. Keep sharing — miamiknifeguy.com/r/${referralCode || ''}`
+              `Your ${BRAND.shorthand} referral was completed! $20 has been added to your rewards balance. Keep sharing — ${BRAND.publicUrl}/r/${referralCode || ''}`
             );
                                                             console.log(`Referral complete SMS sent to ${phone}`);
                                                       } catch (err) {
@@ -142,7 +151,7 @@ exports.sendReviewApprovedSMS = onDocumentUpdated('reviewSubmissions/{reviewId}'
 
       await sendSMS(
               phone,
-              '$10 reward credit added to your MKG account. Thank you for sharing your experience!'
+              `$10 reward credit added to your ${BRAND.shorthand} account. Thank you for sharing your experience!`
             );
                                                           console.log(`Review approved SMS sent to ${phone}`);
                                                     } catch (err) {
@@ -165,7 +174,7 @@ exports.sendFraudFlagSMS = onDocumentUpdated('referrals/{referralId}', async (ev
                                                try {
                                                      await sendSMS(
                                                              OWNER_PHONE,
-                                                             `MKG Fraud Flag: Referral ${referralId} flagged. Check CRM.`
+                                                             `${BRAND.shorthand} Fraud Flag: Referral ${referralId} flagged. Check CRM.`
                                                            );
                                                      console.log(`Fraud alert SMS sent to owner for referral ${referralId}`);
                                                } catch (err) {
@@ -181,28 +190,28 @@ exports.sendFraudFlagSMS = onDocumentUpdated('referrals/{referralId}', async (ev
 
 const REPLIES = {
     SHARP: [
-          'Miami Knife Guy here.',
-          'Register for your first knife free -> https://miamiknifeguy.com/register',
+          `${BRAND.businessName} here.`,
+          `Register for your first knife free -> ${BRAND.publicUrl}/register`,
           'Takes 60 seconds. We come to you.',
           'Questions? Reply HELP.',
         ].join('\n'),
 
     HELP: [
-          'Miami Knife Guy support:',
+          `${BRAND.businessName} support:`,
           'Text SHARP to register.',
-          'Call or text Sean directly: (305) 909-5773',
-          'miamiknifeguy.com',
+          `Call or text ${BRAND.ownerName} directly: ${BRAND.ownerPhoneDisplay}`,
+          BRAND.publicUrl,
         ].join('\n'),
 
     STATUS_NOT_FOUND: [
           'We don\'t see a registration for this number yet.',
           'Text SHARP to get started.',
-          'miamiknifeguy.com/register',
+          `${BRAND.publicUrl}/register`,
         ].join('\n'),
 
     UNKNOWN: [
           'Text SHARP to register for your first knife free.',
-          'miamiknifeguy.com',
+          BRAND.publicUrl,
         ].join('\n'),
 };
 
@@ -235,8 +244,8 @@ exports.handleInboundSMS = onRequest(async (req, res) => {
                                                          const customer = existing.docs[0].data();
                                                          const alreadyRegisteredReply = [
                                                                      `Hey ${customer.firstName || 'there'} — you're already registered.`,
-                                                                     `Your referral link: https://miamiknifeguy.com/r/${customer.referralCode}`,
-                                                                     `Share it to earn rewards. Questions? (305) 909-5773`,
+                                                                     `Your referral link: ${BRAND.publicUrl}/r/${customer.referralCode}`,
+                                                                     `Share it to earn rewards. Questions? ${BRAND.ownerPhoneDisplay}`,
                                                                    ].join('\n');
 
                                                        await db.collection('customerEvents').add({
@@ -254,7 +263,7 @@ exports.handleInboundSMS = onRequest(async (req, res) => {
                                                          status: 'new',
                                                          customerPhone: fromPhone,
                                                          keyword: 'SHARP',
-                                                         ownerPhone: process.env.OWNER_PHONE || '+13059095773',
+                                                         ownerPhone: BRAND.ownerPhone,
                                                          ownerSmsBody: `SHARP keyword from ${fromPhone} — new lead. Not yet registered.`,
                                                          createdAt: FieldValue.serverTimestamp(),
                                                });
@@ -262,9 +271,9 @@ exports.handleInboundSMS = onRequest(async (req, res) => {
                                                try {
                                                          const client = getTwilioClient();
                                                          await client.messages.create({
-                                                                     to: process.env.OWNER_PHONE || '+13059095773',
+                                                                     to: BRAND.ownerPhone,
                                                                      from: process.env.TWILIO_NUMBER,
-                                                                     body: `SHARP keyword from +${fromPhone} — new lead inbound. Not yet registered.`,
+                                                                     body: `SHARP keyword from +${fromPhone} — new ${BRAND.shorthand} lead inbound. Not yet registered.`,
                                                          });
                                                } catch (notifyErr) {
                                                          console.error('Owner notify failed:', notifyErr.message);
@@ -289,10 +298,10 @@ exports.handleInboundSMS = onRequest(async (req, res) => {
 
                                                const c = snap.docs[0].data();
               const statusReply = [
-                        `Hey ${c.firstName || 'there'} — you're registered with Miami Knife Guy.`,
+                        `Hey ${c.firstName || 'there'} — you're registered with ${BRAND.businessName}.`,
         `Rewards balance: $${c.rewardsBalance || 0}`,
                         `Referrals completed: ${c.completedReferrals || 0}`,
-                        `Your link: https://miamiknifeguy.com/r/${c.referralCode}`,
+                        `Your link: ${BRAND.publicUrl}/r/${c.referralCode}`,
                       ].join('\n');
 
                                                return twimlReply(statusReply);
@@ -309,7 +318,7 @@ exports.handleInboundSMS = onRequest(async (req, res) => {
                                              res.set('Content-Type', 'text/xml');
                                              res.status(500).send(`<?xml version="1.0" encoding="UTF-8"?>
                                              <Response>
-                                               <Message>Something went wrong on our end. Text SHARP again or call (305) 909-5773.</Message>
+                                               <Message>Something went wrong on our end. Text SHARP again or call ${BRAND.ownerPhoneDisplay}.</Message>
                                                </Response>`);
                                        }
 });

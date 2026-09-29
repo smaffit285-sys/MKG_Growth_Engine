@@ -11,6 +11,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore'
 import { deleteObject, getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage'
+import { BRAND } from '../lib/brand'
 
 const PLATFORMS = ['TikTok', 'Instagram', 'Facebook', 'Threads', 'X (Twitter)']
 
@@ -113,16 +114,16 @@ export default function UGCSubmit() {
     <div className="public-shell">
       <div className="public-card">
         <div className="text-center mb-6">
-          <p className="page-eyebrow mb-2">Miami Knife Guy</p>
+          <p className="page-eyebrow mb-2">{BRAND.businessName}</p>
           <h1 className="font-['Barlow_Condensed'] text-5xl uppercase tracking-wide leading-none text-white mb-3">Show off the edge.</h1>
-          <h2 className="text-lg font-semibold text-cyan-200 mb-2">Share MKG and earn rewards</h2>
+          <h2 className="text-lg font-semibold text-cyan-200 mb-2">Share {BRAND.shorthand} and earn rewards</h2>
           {customer && (
             <p className="text-orange-400 text-sm">Hi, {customer.firstName}!</p>
           )}
         </div>
         <div className="bg-gray-800 rounded-xl p-4 mb-6">
           <p className="text-gray-300 text-sm font-medium mb-2">How to earn:</p>
-          <p className="text-gray-400 text-sm">Tag <span className="text-orange-400 font-semibold">@MiamiKnifeGuy</span> on any post about us on:</p>
+          <p className="text-gray-400 text-sm">Tag <span className="text-orange-400 font-semibold">{BRAND.socialHandle}</span> on any post about us on:</p>
           <p className="text-gray-400 text-sm mt-1">TikTok, Instagram, Facebook, Threads, or X</p>
         </div>
         {error && (

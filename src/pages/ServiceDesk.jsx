@@ -272,7 +272,7 @@ export default function ServiceDesk() {
       const serviceRef = doc(collection(db, COLLECTIONS.SERVICE_RECORDS))
       const invoiceRef = doc(collection(db, COLLECTIONS.INVOICES))
       const eventRef = doc(collection(db, COLLECTIONS.CUSTOMER_EVENTS))
-      const invoiceNumber = `MKG-${Date.now()}`
+      const invoiceNumber = `${MKG_BRAND.shorthand}-${Date.now()}`
       const invoicePayload = {
         invoiceNumber,
         serviceRecordId: serviceRef.id,

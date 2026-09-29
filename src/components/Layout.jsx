@@ -27,6 +27,7 @@ import {
   X,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { BRAND } from '../lib/brand'
 
 const NAV_GROUPS = [
   {
@@ -147,7 +148,7 @@ export default function Layout({ children }) {
         <div className="sidebar-footer">
           <div className="user-chip">
             <CircleUserRound size={20} aria-hidden="true" />
-            <div><span>Signed in</span><small>{currentUser?.email || 'MKG operator'}</small></div>
+            <div><span>Signed in</span><small>{currentUser?.email || `${BRAND.shorthand} operator`}</small></div>
           </div>
           <button onClick={handleLogout} className="logout-button"><LogOut size={18} /><span>Sign out</span></button>
         </div>

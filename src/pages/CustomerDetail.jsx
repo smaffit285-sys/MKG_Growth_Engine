@@ -15,6 +15,7 @@ import {
 import { db } from '../lib/firebase'
 import { COLLECTIONS } from '../lib/schema'
 import { contactDisplayName, customerDisplayName } from '../lib/serviceMath'
+import { BRAND } from '../lib/brand'
 
 const TABS = ['Overview', 'Activity', 'Services', 'Invoices', 'Referrals', 'Rewards']
 
@@ -145,7 +146,7 @@ export default function CustomerDetail() {
     )
   }
 
-  const referralUrl = `https://miamiknifeguy.com/r/${customer.referralCode || ''}`
+  const referralUrl = `${BRAND.websiteUrl}/r/${customer.referralCode || ''}`
   const reviewUrl = customer.referralCode ? `/review?code=${customer.referralCode}` : '/review'
 
   return (

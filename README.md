@@ -2,7 +2,7 @@
 
 A standalone CRM and growth-flywheel product for professional knife sharpeners. Miami Knife Guy is the founding tenant and proving ground.
 
-The product is white-label ready: graphics, layout, colors, typography, logos, app icon, navigation, written content, service catalogue, pricing, invoice templates, offers, forms, automations, and customer journeys can be customized to each user’s needs.
+The product supports one isolated tenant per deployment. Branding, contact details, public-site trust, notifications, service catalogue, pricing, invoice templates, offers, forms, automations, and customer journeys can be configured without forking customer data between sharpeners.
 
 See `SHARPENER_GROWTH_ENGINE_OFFER.md` for the commercial product definition.
 
@@ -36,7 +36,7 @@ See `SHARPENER_GROWTH_ENGINE_OFFER.md` for the commercial product definition.
 
 ## Environment Variables
 
-Create a `.env` file in the project root (copy from `.env.example`):
+Create a `.env` file in the project root (copy from `.env.example`). The example contains the complete Firebase, tenant-brand, Vercel OIDC, Resend, and Firebase Functions contract. Keep server-only values out of variables prefixed with `VITE_`.
 
 ```bash
 # Firebase Web SDK config (from Project Settings → Your apps → SDK setup)
@@ -50,6 +50,8 @@ VITE_FIREBASE_APP_ID=1:123456789:web:abc123
 # Twilio (displayed on Settings page, read-only in UI)
 VITE_TWILIO_NUMBER=+13055550000
 ```
+
+See `TENANT_DEPLOYMENT.md` for the per-sharpener provisioning and acceptance checklist.
 
 For Firebase Functions, also set the following via `firebase functions:config:set`:
 
@@ -159,4 +161,4 @@ MKG_Growth_Engine/
 
 ## License
 
-Private — Miami Knife Guy internal use only.
+Proprietary commercial software. Distribution and customer deployments require a separate written license from the product owner.

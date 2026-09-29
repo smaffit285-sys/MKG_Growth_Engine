@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, LockKeyhole, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { BRAND } from '../lib/brand'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -29,8 +30,8 @@ export default function Login() {
     <div className="public-shell">
       <div className="public-card max-w-md">
         <div className="flex items-center gap-3 mb-8">
-          <div className="brand-mark">MKG</div>
-          <div><p className="page-eyebrow">Private operations</p><p className="text-white font-semibold">Miami Knife Guy</p></div>
+          <div className="brand-mark">{BRAND.shorthand}</div>
+          <div><p className="page-eyebrow">Private operations</p><p className="text-white font-semibold">{BRAND.businessName}</p></div>
         </div>
         <h1 className="font-['Barlow_Condensed'] text-5xl uppercase tracking-wide leading-none text-white mb-3">Welcome back.</h1>
         <p className="text-slate-400 text-sm mb-8">Your customer, service, reputation, and growth command center.</p>
@@ -74,7 +75,7 @@ export default function Login() {
         </form>
         <div className="mt-7 pt-5 border-t border-sky-200/10 flex gap-2 text-slate-500 text-xs">
           <ShieldCheck size={16} className="text-cyan-300 shrink-0" />
-          <p>Authorized MKG staff only. Customer information stays behind your secure sign-in.</p>
+          <p>Authorized {BRAND.shorthand} staff only. Customer information stays behind your secure sign-in.</p>
         </div>
       </div>
     </div>

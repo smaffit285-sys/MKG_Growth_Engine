@@ -11,6 +11,7 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { QRCodeSVG } from 'qrcode.react'
+import { BRAND } from '../lib/brand'
 
 function generateReferralCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -135,14 +136,14 @@ export default function ReferralLanding() {
   }
 
   if (success) {
-    const referralUrl = `https://miamiknifeguy.com/r/${success.referralCode}`
+    const referralUrl = `${BRAND.websiteUrl}/r/${success.referralCode}`
     return (
       <div className="public-shell">
         <div className="public-card text-center">
           <div className="text-5xl mb-4">🎉</div>
           <p className="page-eyebrow mb-2">Welcome to the sharp side</p>
           <h2 className="font-['Barlow_Condensed'] text-4xl uppercase tracking-wide text-white mb-2">Welcome, {success.firstName}!</h2>
-          <p className="text-gray-400 mb-6">You are now part of the Miami Knife Guy family. Share your code to earn rewards!</p>
+          <p className="text-gray-400 mb-6">You are now part of the {BRAND.businessName} family. Share your code to earn rewards!</p>
           <div className="bg-gray-800 rounded-xl p-4 mb-6">
             <p className="text-gray-400 text-sm mb-1">Your Referral Code</p>
             <p className="text-orange-500 text-3xl font-bold tracking-widest">{success.referralCode}</p>
@@ -160,7 +161,7 @@ export default function ReferralLanding() {
     <div className="public-shell">
       <div className="public-card">
         <div className="text-center mb-6">
-          <p className="page-eyebrow mb-2">Miami Knife Guy</p>
+          <p className="page-eyebrow mb-2">{BRAND.businessName}</p>
           <h1 className="font-['Barlow_Condensed'] text-5xl uppercase tracking-wide leading-none text-white mb-3">A sharper introduction.</h1>
           {referrer ? (
             <p className="text-white text-lg">

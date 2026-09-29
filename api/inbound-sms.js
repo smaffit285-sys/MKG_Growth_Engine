@@ -18,6 +18,12 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
+const BRAND = Object.freeze({
+    businessName: process.env.BUSINESS_NAME || 'Miami Knife Guy',
+    shorthand: process.env.BUSINESS_SHORTHAND || 'MKG',
+    publicUrl: (process.env.PUBLIC_WEBSITE_URL || 'https://miamiknifeguy.com').replace(/\/+$/, ''),
+});
+
 function getTwilioClient() {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -35,20 +41,20 @@ async function sendSMS(to, body) {
 
 const RESPONSES = {
     SHARP: [
-          'Hey! Thanks for texting MKG.',
+          `Hey! Thanks for texting ${BRAND.shorthand}.`,
           "You're now registered for Sharp After Dark.",
-          'Reply with your name and restaurant to get started, or visit miamiknifeguy.com',
+          `Reply with your name and restaurant to get started, or visit ${BRAND.publicUrl}`,
         ].join('\n'),
     STOP: 'You have been unsubscribed. Reply START to resubscribe.',
-    START: 'Welcome back! You are now resubscribed to MKG updates.',
+    START: `Welcome back! You are now resubscribed to ${BRAND.shorthand} updates.`,
     HELP: [
-          'MKG Sharp After Dark — Professional knife sharpening for Miami restaurants.',
+          `${BRAND.shorthand} Sharp After Dark — Professional knife sharpening for restaurants.`,
           'SHARP to register, STOP to unsubscribe, HELP for this message.',
-          'Visit miamiknifeguy.com',
+          `Visit ${BRAND.publicUrl}`,
         ].join('\n'),
     UNKNOWN: [
           'Text SHARP to register for your first knife free.',
-          'miamiknifeguy.com',
+          BRAND.publicUrl,
         ].join('\n'),
 };
 
