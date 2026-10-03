@@ -58,7 +58,7 @@ export function formatLeadEmail(body, customerId) {
 
 async function sendLeadNotification(body, customerId) {
   const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey || body.eventType === 'chat_turn') return { configured: Boolean(apiKey), sent: false }
+  if (!apiKey || (body.eventType === 'chat_turn' && body.details?.ownerReviewRequired !== true)) return { configured: Boolean(apiKey), sent: false }
   const recipients = (process.env.LEAD_NOTIFICATION_TO || 'miamiknifeguy@gmail.com,smaffit@miamiknifeguy.com')
     .split(',').map(value => value.trim()).filter(Boolean)
   const sendingDomain = process.env.RESEND_EMAIL_DOMAIN || 'miamiknifeguy.com'
@@ -199,6 +199,23 @@ export default async function handler(req, res) {
       updatedAt: FieldValue.serverTimestamp(),
     }
     const isChat = body.eventType === 'chat_turn'
+    const shouldAlert = !isChat || body.details?.ownerReviewRequired === true
+    const isCommercial = body.eventType === 'form_submission' && (
+      body.serviceType === 'restaurant' || String(body.source || '').startsWith('public_book_restaurant')
+    )
+    let commercialRef = null
+    let isNewCommercial = false
+    if (isCommercial && contact.business) {
+      const businessName = cleanString(contact.business, 200)
+      const linked = await db.collection('commercialAccounts').where('customerId', '==', customerRef.id).limit(1).get()
+      const matched = linked.empty
+        ? await db.collection('commercialAccounts').where('businessName', '==', businessName).limit(1).get()
+        : linked
+      commercialRef = matched.empty
+        ? db.collection('commercialAccounts').doc(`website-${customerRef.id}`)
+        : matched.docs[0].ref
+      isNewCommercial = matched.empty
+    }
     const alertRef = db.collection('leadAlerts').doc(`${body.eventId}:alert`)
 
     await db.runTransaction(async transaction => {
@@ -220,19 +237,43 @@ export default async function handler(req, res) {
         page: body.page || {},
         createdAt: FieldValue.serverTimestamp(),
       })
-      if (!isChat) transaction.create(alertRef, {
+      if (commercialRef) transaction.set(commercialRef, {
+        customerId: customerRef.id,
+        businessName: cleanString(contact.business, 200),
+        contactName: fullName,
+        phone, email,
+        address: cleanString(contact.location || contact.address || '', 300),
+        source: body.source,
+        latestWebsiteEvent: body.eventId,
+        latestWebsiteDetails: body.details || {},
+        updatedAt: FieldValue.serverTimestamp(),
+        ...(isNewCommercial ? {
+          accountType: 'restaurant', accountStatus: 'prospect', trustStage: 'cold',
+          monthlyValue: 0, knivesEstimated: Number.parseInt(String(body.details?.knifeVolume || '0'), 10) || 0,
+          createdAt: FieldValue.serverTimestamp(),
+        } : {}),
+      }, { merge: true })
+      if (shouldAlert) transaction.create(alertRef, {
         alertType: 'website_lead', status: 'new', customerId: customerRef.id,
         eventId: body.eventId, eventType: body.eventType, source: body.source,
-        serviceType: body.serviceType || '', createdAt: FieldValue.serverTimestamp(),
+        serviceType: body.serviceType || '', notificationStatus: 'pending', createdAt: FieldValue.serverTimestamp(),
       })
     })
 
     try {
-      await sendLeadNotification(body, customerRef.id)
+      const notice = await sendLeadNotification(body, customerRef.id)
+      if (shouldAlert) await alertRef.set({
+        notificationStatus: notice.sent ? 'sent' : 'unconfigured',
+        notificationUpdatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true })
     } catch (error) {
-      // CRM capture is the source of truth. A temporary email outage must not
-      // discard a lead that was already saved successfully.
+      // Keep the saved lead visible even when the email provider rejects it.
       console.error('Lead notification email error', error)
+      if (shouldAlert) await alertRef.set({
+        notificationStatus: 'failed',
+        notificationError: cleanString(error?.message || 'Email delivery failed', 200),
+        notificationUpdatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true })
     }
 
     return res.status(200).json({ saved: true, duplicate: false, customerId: customerRef.id })

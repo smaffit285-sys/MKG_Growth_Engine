@@ -66,7 +66,7 @@ function MiniBars({ data }) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [data, setData] = useState({ customers: [], referrals: [], reviews: [], ugc: [], commercial: [], invoices: [], services: [], sessions: [], content: [], proof: [], training: [], events: [] })
+  const [data, setData] = useState({ customers: [], referrals: [], reviews: [], ugc: [], commercial: [], invoices: [], services: [], sessions: [], content: [], proof: [], training: [], events: [], leadAlerts: [] })
   const [loading, setLoading] = useState(true)
   const [dataWarning, setDataWarning] = useState('')
 
@@ -84,6 +84,7 @@ export default function Dashboard() {
       ['proof', COLLECTIONS.PROOF_ASSETS, 100],
       ['training', COLLECTIONS.TRAINING_SESSIONS, 100],
       ['events', COLLECTIONS.CUSTOMER_EVENTS, 50],
+      ['leadAlerts', COLLECTIONS.LEAD_ALERTS, 50],
     ]
     let resolved = 0
     let failures = 0
@@ -128,6 +129,8 @@ export default function Dashboard() {
       reviewsPending: data.reviews.filter(review => (review.status || 'pending') === 'pending').length,
       ugcPending: data.ugc.filter(post => (post.status || 'pending') === 'pending').length,
       contentIdeas: data.content.filter(content => content.stage !== CONTENT_STAGES.PUBLISHED).length,
+      newWebsiteLeads: data.leadAlerts.filter(alert => alert.status === 'new').length,
+      failedNotifications: data.leadAlerts.filter(alert => alert.notificationStatus === 'failed' || alert.notificationStatus === 'unconfigured').length,
     }
   }, [data])
 
@@ -161,6 +164,7 @@ export default function Dashboard() {
         </>}
       />
 
+      {metrics.failedNotifications > 0 && <div role="alert" className="rounded-xl border border-amber-300/40 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">Website lead email delivery needs attention for {metrics.failedNotifications} recent alert{metrics.failedNotifications === 1 ? '' : 's'}. The requests were saved in the CRM; check Resend credentials and sender authorization.</div>}
       {dataWarning && <div role="status" className="rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">{dataWarning}</div>}
 
       <section aria-labelledby="scoreboard-title">
@@ -177,6 +181,7 @@ export default function Dashboard() {
         <section className="surface-card p-5 md:p-6" aria-labelledby="priority-title">
           <div className="section-heading"><div><p className="page-eyebrow">Next actions</p><h2 id="priority-title">What needs attention</h2></div><Clock3 size={22} className="text-cyan-300" /></div>
           <div className="mt-4 grid gap-2">
+            <ActionRow icon={UserRoundPlus} label="Review website leads" detail="New website inquiries saved in the CRM" value={metrics.newWebsiteLeads} route="/customers" navigate={navigate} urgent />
             <ActionRow icon={ReceiptText} label="Collect unpaid invoices" detail="Open balances ready for follow-up" value={metrics.unpaidInvoices} route="/invoices" navigate={navigate} urgent />
             <ActionRow icon={MessageSquareText} label="Ask for reviews" detail="Completed services without a review request" value={metrics.reviewFollowUps} route="/field" navigate={navigate} urgent />
             <ActionRow icon={UsersRound} label="Follow up with customers" detail="Follow-up date is today or earlier" value={metrics.dueFollowUps} route="/customers" navigate={navigate} urgent />
@@ -190,6 +195,20 @@ export default function Dashboard() {
           {loading ? <Skeleton className="mt-5 h-48 w-full" /> : <MiniBars data={chartData} />}
         </section>
       </div>
+
+      <section className="surface-card p-5 md:p-6" aria-labelledby="website-leads-title">
+        <div className="section-heading"><div><p className="page-eyebrow">Website intake</p><h2 id="website-leads-title">Recent lead alerts</h2></div></div>
+        <div className="mt-4 divide-y divide-sky-100/10">
+          {data.leadAlerts.length === 0 ? <p className="py-4 text-sm text-slate-400">New website requests will appear here.</p> : data.leadAlerts.slice(0, 8).map(alert => (
+            <div key={alert.id} className="flex flex-wrap items-center gap-3 py-3 text-sm text-slate-200">
+              <span className="flex-1">{String(alert.source || alert.eventType || "Website request").replaceAll("_", " ")}</span>
+              <span className="text-xs text-slate-400">{alert.status || "new"}</span>
+              <span className={alert.notificationStatus === "failed" || alert.notificationStatus === "unconfigured" ? "text-xs text-amber-300" : "text-xs text-slate-400"}>Email: {alert.notificationStatus || "unknown"}</span>
+              <span className="text-xs text-slate-500">{alert.createdAt?.seconds ? new Date(alert.createdAt.seconds * 1000).toLocaleDateString() : ""}</span>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,.8fr)]">
         <section className="surface-card p-5 md:p-6" aria-labelledby="activity-title">
