@@ -201,7 +201,7 @@ export default async function handler(req, res) {
     const isChat = body.eventType === 'chat_turn'
     const shouldAlert = !isChat || body.details?.ownerReviewRequired === true
     const isCommercial = body.eventType === 'form_submission' && (
-      body.serviceType === 'restaurant' || String(body.source || '').startsWith('public_book_restaurant')
+      body.serviceType === 'restaurant' || body.serviceType === 'corporate_culinary_experience' || String(body.source || '').startsWith('public_book_restaurant')
     )
     let commercialRef = null
     let isNewCommercial = false
@@ -248,7 +248,7 @@ export default async function handler(req, res) {
         latestWebsiteDetails: body.details || {},
         updatedAt: FieldValue.serverTimestamp(),
         ...(isNewCommercial ? {
-          accountType: 'restaurant', accountStatus: 'prospect', trustStage: 'cold',
+          accountType: String(body.details?.businessType || '').toLowerCase() === 'hotel' ? 'hotel' : (body.serviceType === 'corporate_culinary_experience' || String(body.details?.businessType || '').toLowerCase().startsWith('other') ? 'other' : 'restaurant'), accountStatus: 'prospect', trustStage: 'cold',
           monthlyValue: 0, knivesEstimated: Number.parseInt(String(body.details?.knifeVolume || '0'), 10) || 0,
           createdAt: FieldValue.serverTimestamp(),
         } : {}),
