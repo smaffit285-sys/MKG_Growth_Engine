@@ -1,3 +1,4 @@
+import process from 'node:process'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { formatLeadEmail, normalizePhone, sanitize, sendLeadNotification } from '../api/website-intake.js'
@@ -37,7 +38,7 @@ test('routes service alerts to the primary with a Gmail copy and uses backups on
     process.env.LEAD_NOTIFICATION_SERVICE_COPY_TO = 'smaffit285@gmail.com'
     globalThis.fetch = async (_url, options) => {
       calls.push(JSON.parse(options.body))
-      return Response.json({ id: 'test-email' })
+      return globalThis.Response.json({ id: 'test-email' })
     }
     const service = await sendLeadNotification({ eventType: 'form_submission', serviceType: 'restaurant', contact: { name: 'Test Chef' } }, 'customer-test')
     assert.equal(service.sent, true)
@@ -51,8 +52,8 @@ test('routes service alerts to the primary with a Gmail copy and uses backups on
     globalThis.fetch = async (_url, options) => {
       calls.push(JSON.parse(options.body))
       return ++attempt === 1
-        ? Response.json({ message: 'Primary rejected' }, { status: 400 })
-        : Response.json({ id: 'backup-email' })
+        ? globalThis.Response.json({ message: 'Primary rejected' }, { status: 400 })
+        : globalThis.Response.json({ id: 'backup-email' })
     }
     const other = await sendLeadNotification({ eventType: 'review_submission', contact: { name: 'Test Reviewer' } }, 'customer-test')
     assert.equal(other.sent, true)
