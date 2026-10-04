@@ -68,6 +68,12 @@ export async function sendLeadNotification(body, customerId) {
     ...(process.env.LEAD_NOTIFICATION_BACKUP_TO || 'smaffit285@gmail.com,miamiknifeguy@gmail.com')
       .split(',').map(value => value.trim()).filter(Boolean),
   ])].filter(value => value.toLowerCase() !== primary.toLowerCase())
+  const isServiceRequest = body.eventType === 'booking_request'
+    || (body.eventType === 'form_submission' && body.serviceType !== 'general')
+  const serviceCopy = isServiceRequest
+    ? (process.env.LEAD_NOTIFICATION_SERVICE_COPY_TO || 'smaffit285@gmail.com')
+      .split(',').map(value => value.trim()).filter(value => value && value.toLowerCase() !== primary.toLowerCase())
+    : []
   const sendingDomain = process.env.RESEND_EMAIL_DOMAIN || 'miamiknifeguy.com'
   const brandShortName = process.env.BUSINESS_SHORTHAND || 'MKG'
   const from = process.env.LEAD_NOTIFICATION_FROM || `${brandShortName} Website <bookings@${sendingDomain}>`
@@ -80,11 +86,11 @@ export async function sendLeadNotification(body, customerId) {
     ...(body.contact?.email ? { reply_to: cleanString(body.contact.email, 320) } : {}),
   }
 
-  async function sendTo(recipients) {
+  async function sendTo(recipients, copyRecipients = []) {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...email, to: recipients }),
+      body: JSON.stringify({ ...email, to: recipients, ...(copyRecipients.length ? { bcc: copyRecipients } : {}) }),
     })
     if (!response.ok) {
       let detail = ''
@@ -97,7 +103,7 @@ export async function sendLeadNotification(body, customerId) {
   }
 
   try {
-    await sendTo([primary])
+    await sendTo([primary], serviceCopy)
     return { configured: true, sent: true, fallback: false }
   } catch (primaryError) {
     if (!backups.length) throw primaryError
@@ -292,7 +298,8 @@ export default async function handler(req, res) {
     try {
       const notice = await sendLeadNotification(body, customerRef.id)
       if (shouldAlert) await alertRef.set({
-        notificationStatus: notice.sent ? 'sent' : 'unconfigured',
+        notificationStatus: notice.fallback ? 'fallback_sent' : (notice.sent ? 'sent' : 'unconfigured'),
+        ...(notice.primaryError ? { notificationError: notice.primaryError } : {}),
         notificationUpdatedAt: FieldValue.serverTimestamp(),
       }, { merge: true })
     } catch (error) {
