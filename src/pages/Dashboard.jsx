@@ -130,7 +130,7 @@ export default function Dashboard() {
       ugcPending: data.ugc.filter(post => (post.status || 'pending') === 'pending').length,
       contentIdeas: data.content.filter(content => content.stage !== CONTENT_STAGES.PUBLISHED).length,
       newWebsiteLeads: data.leadAlerts.filter(alert => alert.status === 'new').length,
-      failedNotifications: data.leadAlerts.filter(alert => alert.notificationStatus === 'failed' || alert.notificationStatus === 'unconfigured').length,
+      failedNotifications: data.leadAlerts.filter(alert => ['failed', 'unconfigured', 'fallback_sent'].includes(alert.notificationStatus)).length,
     }
   }, [data])
 
@@ -203,7 +203,7 @@ export default function Dashboard() {
             <div key={alert.id} className="flex flex-wrap items-center gap-3 py-3 text-sm text-slate-200">
               <span className="flex-1">{String(alert.source || alert.eventType || "Website request").replaceAll("_", " ")}</span>
               <span className="text-xs text-slate-400">{alert.status || "new"}</span>
-              <span className={alert.notificationStatus === "failed" || alert.notificationStatus === "unconfigured" ? "text-xs text-amber-300" : "text-xs text-slate-400"}>Email: {alert.notificationStatus || "unknown"}</span>
+              <span className={["failed", "unconfigured", "fallback_sent"].includes(alert.notificationStatus) ? "text-xs text-amber-300" : "text-xs text-slate-400"}>Email: {alert.notificationStatus || "unknown"}</span>
               <span className="text-xs text-slate-500">{alert.createdAt?.seconds ? new Date(alert.createdAt.seconds * 1000).toLocaleDateString() : ""}</span>
             </div>
           ))}
