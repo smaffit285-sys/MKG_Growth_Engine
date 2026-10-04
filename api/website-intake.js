@@ -56,29 +56,58 @@ export function formatLeadEmail(body, customerId) {
   }).join('\n').trim()
 }
 
-async function sendLeadNotification(body, customerId) {
+export async function sendLeadNotification(body, customerId) {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey || (body.eventType === 'chat_turn' && body.details?.ownerReviewRequired !== true)) return { configured: Boolean(apiKey), sent: false }
-  const recipients = (process.env.LEAD_NOTIFICATION_TO || 'miamiknifeguy@gmail.com,smaffit@miamiknifeguy.com')
+
+  const requestedRecipients = (process.env.LEAD_NOTIFICATION_TO || 'smaffit@miamiknifeguy.com')
     .split(',').map(value => value.trim()).filter(Boolean)
+  const primary = requestedRecipients[0] || 'smaffit@miamiknifeguy.com'
+  const backups = [...new Set([
+    ...requestedRecipients.slice(1),
+    ...(process.env.LEAD_NOTIFICATION_BACKUP_TO || 'smaffit285@gmail.com,miamiknifeguy@gmail.com')
+      .split(',').map(value => value.trim()).filter(Boolean),
+  ])].filter(value => value.toLowerCase() !== primary.toLowerCase())
   const sendingDomain = process.env.RESEND_EMAIL_DOMAIN || 'miamiknifeguy.com'
   const brandShortName = process.env.BUSINESS_SHORTHAND || 'MKG'
   const from = process.env.LEAD_NOTIFICATION_FROM || `${brandShortName} Website <bookings@${sendingDomain}>`
   const contactName = cleanString(body.contact?.name || body.contact?.business || 'Website visitor', 100)
   const subject = `[${brandShortName} Website] ${cleanString(body.eventType, 80).replaceAll('_', ' ')} — ${contactName}`
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from,
-      to: recipients,
-      subject,
-      text: formatLeadEmail(body, customerId),
-      ...(body.contact?.email ? { reply_to: cleanString(body.contact.email, 320) } : {}),
-    }),
-  })
-  if (!response.ok) throw new Error(`Lead notification email returned ${response.status}`)
-  return { configured: true, sent: true }
+  const email = {
+    from,
+    subject,
+    text: formatLeadEmail(body, customerId),
+    ...(body.contact?.email ? { reply_to: cleanString(body.contact.email, 320) } : {}),
+  }
+
+  async function sendTo(recipients) {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...email, to: recipients }),
+    })
+    if (!response.ok) {
+      let detail = ''
+      try {
+        const errorBody = await response.json()
+        detail = cleanString(errorBody?.message || errorBody?.name || '', 160)
+      } catch {}
+      throw new Error(`Lead notification email returned ${response.status}${detail ? `: ${detail}` : ''}`)
+    }
+  }
+
+  try {
+    await sendTo([primary])
+    return { configured: true, sent: true, fallback: false }
+  } catch (primaryError) {
+    if (!backups.length) throw primaryError
+    try {
+      await sendTo(backups)
+      return { configured: true, sent: true, fallback: true, primaryError: cleanString(primaryError?.message, 200) }
+    } catch (backupError) {
+      throw new Error(`Primary: ${cleanString(primaryError?.message, 160)}; backups: ${cleanString(backupError?.message, 160)}`)
+    }
+  }
 }
 
 export function sanitize(value, depth = 0) {
