@@ -79,3 +79,13 @@ test('an owner can publish and retract without copying private draft fields', as
   assert.equal(removed.statusCode, 200); assert.equal(rows.has('publishedProof/knife-repair'), false)
   assert.equal(rows.get('proofAssets/draft').customerId, 'private-customer')
 })
+test('Firebase Auth JWKS dependency exposes a working CommonJS key conversion', async () => {
+  const { createRequire } = await import('node:module')
+  const { generateKeyPairSync } = await import('node:crypto')
+  const require = createRequire(import.meta.url)
+  const { retrieveSigningKeys } = require('jwks-rsa/src/utils')
+  const { publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 })
+  const keys = await retrieveSigningKeys([{ ...publicKey.export({ format: 'jwk' }), kid: 'test-key', alg: 'RS256' }])
+  assert.equal(keys.length, 1)
+  assert.equal(keys[0].getPublicKey(), publicKey.export({ format: 'pem', type: 'spki' }))
+})
