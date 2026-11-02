@@ -10,8 +10,9 @@
         "test:intake": "node --test tests/website-intake.test.mjs",
         "test:product": "node --test tests/product-shell.test.mjs",
         "test:tenant": "node --test tests/tenant-config.test.mjs",
-        "test": "npm run test:intake && npm run test:product && npm run test:tenant",
-        "preview": "vite preview"
+        "test": "npm run test:intake && npm run test:product && npm run test:tenant && npm run test:proof",
+        "preview": "vite preview",
+        "test:proof": "node --test tests/public-proof.test.mjs"
     },
     "dependencies": {
         "@vercel/oidc": "^3.8.9",
@@ -38,6 +39,9 @@
         "vite": "^8.3.1"
     },
     "overrides": {
-        "uuid": "^11.1.1"
+        "uuid": "^11.1.1",
+        "jwks-rsa": {
+            "jose": "5.10.0"
+        }
     }
 }

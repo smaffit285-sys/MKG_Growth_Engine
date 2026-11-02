@@ -9,13 +9,12 @@ import {
   updateDoc,
   serverTimestamp,
   getDoc,
-  increment,
-  writeBatch,
 } from 'firebase/firestore'
 
 const STATUS_COLORS = {
   pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   approved: 'bg-green-500/20 text-green-400 border-green-500/30',
+  reviewed: 'bg-green-500/20 text-green-400 border-green-500/30',
   rejected: 'bg-red-500/20 text-red-400 border-red-500/30',
 }
 
@@ -67,22 +66,8 @@ export default function Reviews() {
     try {
       const submissionRef = doc(db, 'reviewSubmissions', sub.id)
       const currentSubmission = await getDoc(submissionRef)
-      if (!currentSubmission.exists() || currentSubmission.data().rewardIssued) return
-      const batch = writeBatch(db)
-      batch.update(submissionRef, { status: 'approved', rewardIssued: true, reviewedAt: serverTimestamp() })
-      if (sub.customerId && customers[sub.customerId]) {
-        batch.update(doc(db, 'customers', sub.customerId), { rewardsBalance: increment(10), lastActivity: serverTimestamp() })
-        batch.set(doc(collection(db, 'rewardLedger')), {
-          customerId: sub.customerId,
-          type: 'review_approved',
-          amount: 10,
-          status: 'issued',
-          source: 'review',
-          relatedReviewId: sub.id,
-          createdAt: serverTimestamp(),
-        })
-      }
-      await batch.commit()
+      if (!currentSubmission.exists() || currentSubmission.data().status !== 'pending') return
+      await updateDoc(submissionRef, { status: 'reviewed', reviewedAt: serverTimestamp() })
     } catch (e) {
       console.error(e)
       setActionError('The review was not approved. Nothing was changed; please try again.')
@@ -108,6 +93,7 @@ export default function Reviews() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold text-white mb-6">Review Submissions</h1>
+      <p className="text-gray-400 mb-5">Track genuine feedback. Reviewing a submission never issues a reward or changes a customer balance.</p>
       {actionError && <div role="alert" className="mb-4 rounded-xl border border-red-400/30 bg-red-950/40 p-3 text-sm text-red-200">{actionError}</div>}
       {loading ? (
         <div className="space-y-3">
@@ -136,12 +122,13 @@ export default function Reviews() {
                   <td className="px-4 py-3 text-white text-sm">{getName(sub.customerId)}</td>
                   <td className="px-4 py-3 text-gray-300 text-sm capitalize">{sub.platform}</td>
                   <td className="px-4 py-3 text-sm">
+                    {sub.feedback && <p className="whitespace-pre-line mb-2">{sub.feedback}</p>}
                     {sub.submissionUrl ? <a href={sub.submissionUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate max-w-xs block">{sub.submissionUrl.length > 40 ? sub.submissionUrl.slice(0, 40) + '...' : sub.submissionUrl}</a> : '—'}
                   </td>
                   <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full text-xs border ${STATUS_COLORS[sub.status] || STATUS_COLORS.pending}`}>{sub.status || 'pending'}</span></td>
                   <td className="px-4 py-3 text-gray-400 text-sm">{sub.createdAt?.toDate ? sub.createdAt.toDate().toLocaleDateString() : '—'}</td>
                   <td className="px-4 py-3">
-                    {(sub.status || 'pending') === 'pending' && <div className="flex gap-2"><button onClick={() => handleApprove(sub)} disabled={processing[sub.id]} className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-green-900 text-white text-xs rounded-lg">{processing[sub.id] ? '...' : 'Approve (+$10)'}</button><button onClick={() => handleReject(sub)} disabled={processing[sub.id]} className="px-3 py-1 bg-red-700 hover:bg-red-800 disabled:bg-red-900 text-white text-xs rounded-lg">Reject</button></div>}
+                    {(sub.status || 'pending') === 'pending' && <div className="flex gap-2"><button onClick={() => handleApprove(sub)} disabled={processing[sub.id]} className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-green-900 text-white text-xs rounded-lg">{processing[sub.id] ? '...' : 'Mark reviewed'}</button><button onClick={() => handleReject(sub)} disabled={processing[sub.id]} className="px-3 py-1 bg-red-700 hover:bg-red-800 disabled:bg-red-900 text-white text-xs rounded-lg">Reject</button></div>}
                   </td>
                 </tr>
               ))}

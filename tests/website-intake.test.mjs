@@ -1,7 +1,7 @@
 import process from 'node:process'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { formatLeadEmail, normalizePhone, sanitize, sendLeadNotification } from '../api/website-intake.js'
+import { createWebsiteIntakeHandler, formatLeadEmail, normalizePhone, sanitize, sendLeadNotification } from '../api/website-intake.js'
 
 test('normalizes US phone numbers for CRM matching', () => {
   assert.equal(normalizePhone('+1 (305) 555-0100'), '3055550100')
@@ -71,3 +71,50 @@ test('routes service alerts to the primary with a Gmail copy and uses backups on
     }
   }
 })
+
+function mockResponse() {
+  return { statusCode: 200, setHeader() {}, status(code) { this.statusCode = code; return this }, json(body) { this.body = body; return this } }
+}
+function mockDatabase() {
+  const rows = new Map(); let sequence = 0;
+  const database = {
+    collection(name) {
+      const collection = {
+        doc(id = `generated-${++sequence}`) {
+          const path = `${name}/${id}`;
+          return { id, path, async get() { return { exists: rows.has(path), data: () => rows.get(path) } }, async set(value, options) { rows.set(path, options?.merge ? { ...rows.get(path), ...value } : value) } };
+        },
+        where() { return { limit: () => ({ get: async () => ({ empty: true, docs: [] }) }) } },
+      }; return collection;
+    },
+    async runTransaction(callback) {
+      const writes = [];
+      await callback({
+        get: ref => ref.get(),
+        set: (ref, value) => writes.push([ref.path, value]),
+        create: (ref, value) => writes.push([ref.path, value]),
+      });
+      for (const [path, value] of writes) rows.set(path, value);
+    },
+  }; return { database, rows };
+}
+test('website feedback reaches the admin review queue exactly once with attribution and no reward writes', async () => {
+  const { database, rows } = mockDatabase(); let notifications = 0;
+  const handler = createWebsiteIntakeHandler({ getDatabase: async () => database, verifyToken: async () => {}, notify: async () => { notifications++; return { sent: true }; } });
+  const body = { eventId: 'review:integration-test', eventType: 'review_submission', source: 'public_review', contact: { name: 'Test Customer' }, details: { platform: 'private', feedback: 'Actual feedback', discoverySource: 'ChatGPT' }, attribution: { utm_source: 'chatgpt' }, page: { landingPath: '/' } };
+  const req = { method: 'POST', headers: { authorization: 'Bearer test' }, body };
+  const res = mockResponse(); await handler(req, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(rows.get('reviewSubmissions/review:integration-test').feedback, 'Actual feedback');
+  assert.equal(rows.get('customerEvents/review:integration-test').attribution.utm_source, 'chatgpt');
+  assert(![...rows.keys()].some(key => key.startsWith('rewardLedger/')));
+  assert(![...rows.values()].some(value => Object.hasOwn(value, 'rewardsBalance')));
+  const repeat = mockResponse(); await handler(req, repeat);
+  assert.equal(repeat.body.duplicate, true); assert.equal(notifications, 1);
+});
+test('untrusted website intake is rejected before any database read', async () => {
+  let read = false;
+  const handler = createWebsiteIntakeHandler({ verifyToken: async () => { throw new Error('unauthorized') }, getDatabase: async () => { read = true } });
+  const res = mockResponse(); await handler({ method: 'POST', headers: {} }, res);
+  assert.equal(res.statusCode, 401); assert.equal(read, false);
+});
