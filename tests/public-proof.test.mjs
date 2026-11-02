@@ -36,6 +36,46 @@ test('unavailable database fails closed and writes are rejected without accessin
   const handler = createPublicProofHandler(async () => { throw new Error('unavailable') })
   const res = response(); await handler({ method: 'GET' }, res)
   assert.equal(res.statusCode, 503); assert.equal(res.body.cases, undefined)
-  const write = response(); await handler({ method: 'POST' }, write)
+  const write = response(); await handler({ method: 'PATCH' }, write)
   assert.equal(write.statusCode, 405)
+})
+
+test('publication requires identity, explicit staff role, and permission before any writes', async () => {
+  const absent = response(); await createPublicProofHandler(async () => { throw new Error('must not read') })({ method: 'POST', headers: {} }, absent);
+  assert.equal(absent.statusCode, 401);
+  for (const role of ['staff', 'marketing', 'readonly', null]) {
+    const db = { collection: () => ({ doc: () => ({ get: async () => ({ exists: Boolean(role), data: () => ({ role }) }) }) }) };
+    const denied = response(); await createPublicProofHandler(async () => db, async () => ({ uid: 'u' }))({ method: 'POST', headers: { authorization: 'Bearer test' } }, denied);
+    assert.equal(denied.statusCode, 403);
+  }
+  const db = { collection: () => ({ doc: () => ({ get: async () => ({ exists: true, data: () => ({ role: 'owner' }) }) }) }) };
+  const unapproved = response(); await createPublicProofHandler(async () => db, async () => ({ uid: 'owner' }))({ method: 'POST', headers: { authorization: 'Bearer test' }, body: { draftId: 'draft', caseStudy: example } }, unapproved);
+  assert.equal(unapproved.statusCode, 400);
+});
+test('an owner can publish and retract without copying private draft fields', async () => {
+  const rows = new Map([
+    ['staffUsers/owner', { role: 'owner' }],
+    ['proofAssets/draft', { customerId: 'private-customer', serviceRecordId: 'private-job', privateNotes: 'Private' }],
+  ])
+  const db = {
+    collection(name) { return {
+      doc(id) { const path = `${name}/${id}`; return { path, get: async () => ({ exists: rows.has(path), data: () => rows.get(path) }) } },
+      limit() { return { get: async () => ({ docs: [...rows.entries()].filter(([key]) => key.startsWith(`${name}/`)).map(([, data]) => ({ data: () => data })) }) } },
+    } },
+    async runTransaction(callback) {
+      const writes = []
+      await callback({ get: ref => ref.get(), set: (ref, data) => writes.push(() => rows.set(ref.path, data)), update: (ref, data) => writes.push(() => rows.set(ref.path, { ...rows.get(ref.path), ...data })), delete: ref => writes.push(() => rows.delete(ref.path)) })
+      writes.forEach(write => write())
+    },
+  }
+  const handler = createPublicProofHandler(async () => db, async () => ({ uid: 'owner' }))
+  const request = { method: 'POST', headers: { authorization: 'Bearer test' }, body: { draftId: 'draft', publicationConsent: true, caseStudy: { ...example, customerId: 'private-customer' } } }
+  const saved = response(); await handler(request, saved)
+  assert.equal(saved.statusCode, 200); assert.equal(saved.body.published, true)
+  assert.equal(rows.get('publishedProof/knife-repair').customerId, undefined)
+  const feed = response(); await handler({ method: 'GET' }, feed)
+  assert.equal(feed.body.cases.length, 1); assert(!JSON.stringify(feed.body).includes('private-customer'))
+  const removed = response(); await handler({ ...request, method: 'DELETE', body: { draftId: 'draft' } }, removed)
+  assert.equal(removed.statusCode, 200); assert.equal(rows.has('publishedProof/knife-repair'), false)
+  assert.equal(rows.get('proofAssets/draft').customerId, 'private-customer')
 })

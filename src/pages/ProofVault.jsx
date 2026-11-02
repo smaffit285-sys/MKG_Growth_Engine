@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, onSnapshot, orderBy, query, runTransaction, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
+import { addDoc, collection, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -49,21 +49,14 @@ export default function ProofVault() {
     setBusy(true); setError(''); setMessage('')
     try {
       const data = publicCase(form)
-      // Reserve the slug to this draft so another case cannot be overwritten.
-      await runTransaction(db, async tx => {
-        const publicRef = doc(db, 'publishedProof', data.slug)
-        const draftRef = doc(db, 'proofAssets', editing.id)
-        const current = await tx.get(draftRef)
-        const existing = await tx.get(publicRef)
-        if (!current.exists()) throw new Error('Save the draft before publishing.')
-        const previousSlug = current.data().publishedSlug
-        if (existing.exists() && previousSlug !== data.slug) throw new Error('That URL slug is already published. Choose a different one.')
-        tx.set(publicRef, { ...data, publicationStatus: 'published', publicationConsent: true })
-        if (previousSlug && previousSlug !== data.slug) tx.delete(doc(db, 'publishedProof', previousSlug))
-        tx.update(draftRef, { ...form, publishedSlug: data.slug, publicationStatus: 'published', permissionConfirmedBy: currentUser.uid, publishedAt: serverTimestamp() })
+      const response = await fetch('/api/public-proof', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await currentUser.getIdToken()}` },
+        body: JSON.stringify({ draftId: editing.id, publicationConsent: consent, caseStudy: data }),
       })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Publication failed.')
       setEditing({ ...editing, publishedSlug: data.slug }); setConsent(false)
-      setMessage('Published to the approved feed. The public website can display it after both deployments are enabled.')
+      setMessage('Published to the approved feed. It is ready for the connected public website.')
     } catch (err) { setError(err.message || 'Publication failed. Please try again.') }
     finally { setBusy(false) }
   }
@@ -71,10 +64,13 @@ export default function ProofVault() {
     if (busy || !canPublish || !asset.publishedSlug) return
     setBusy(true); setError('')
     try {
-      const batch = writeBatch(db)
-      batch.delete(doc(db, 'publishedProof', asset.publishedSlug))
-      batch.update(doc(db, 'proofAssets', asset.id), { publicationStatus: 'draft', publishedSlug: '', updatedAt: serverTimestamp() })
-      await batch.commit(); if (editing?.id === asset.id) setEditing({ ...asset, publishedSlug: '' })
+      const response = await fetch('/api/public-proof', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await currentUser.getIdToken()}` },
+        body: JSON.stringify({ draftId: asset.id }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Retraction failed.')
+      if (editing?.id === asset.id) setEditing({ ...asset, publishedSlug: '' })
       setMessage('Removed from the public feed. Cached pages may take up to one minute to refresh.')
     } catch { setError('Could not retract this case. Please try again.') }
     finally { setBusy(false) }

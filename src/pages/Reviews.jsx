@@ -14,6 +14,7 @@ import {
 const STATUS_COLORS = {
   pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   approved: 'bg-green-500/20 text-green-400 border-green-500/30',
+  reviewed: 'bg-green-500/20 text-green-400 border-green-500/30',
   rejected: 'bg-red-500/20 text-red-400 border-red-500/30',
 }
 
@@ -66,7 +67,7 @@ export default function Reviews() {
       const submissionRef = doc(db, 'reviewSubmissions', sub.id)
       const currentSubmission = await getDoc(submissionRef)
       if (!currentSubmission.exists() || currentSubmission.data().status !== 'pending') return
-      await updateDoc(submissionRef, { status: 'approved', reviewedAt: serverTimestamp() })
+      await updateDoc(submissionRef, { status: 'reviewed', reviewedAt: serverTimestamp() })
     } catch (e) {
       console.error(e)
       setActionError('The review was not approved. Nothing was changed; please try again.')
