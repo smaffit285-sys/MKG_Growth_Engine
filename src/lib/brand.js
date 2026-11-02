@@ -22,7 +22,7 @@ export function createBrand(env = {}) {
     email: configured(env, 'VITE_BRAND_EMAIL', 'miamiknifeguy@gmail.com'),
     tagline: configured(env, 'VITE_BRAND_TAGLINE', 'On the cutting edge since 2009'),
     socialHandle: configured(env, 'VITE_BRAND_SOCIAL_HANDLE', '@MiamiKnifeGuy'),
-    reviewRequest: configured(env, 'VITE_BRAND_REVIEW_REQUEST', 'If the service earned it, an honest Google review is always appreciated.'),
+    reviewRequest: configured(env, 'VITE_BRAND_REVIEW_REQUEST', 'An honest review of your experience is always appreciated.'),
   })
 }
 

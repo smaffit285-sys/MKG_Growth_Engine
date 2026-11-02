@@ -23,5 +23,7 @@ jobs:
         run: npm run test:intake
       - name: Test product workflows
         run: npm run test:product
+      - name: Test publication boundaries and tenant isolation
+        run: npm run test:proof && npm run test:tenant
       - name: Build
         run: npm run build

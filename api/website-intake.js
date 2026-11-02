@@ -130,7 +130,7 @@ export function sanitize(value, depth = 0) {
   return undefined
 }
 
-async function database() {
+export async function database() {
   const projectId = process.env.GCP_PROJECT_ID
   const projectNumber = process.env.GCP_PROJECT_NUMBER
   const serviceAccountEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL
@@ -184,12 +184,13 @@ async function findCustomer(db, phone, email, sessionId) {
   return null
 }
 
-export default async function handler(req, res) {
+export function createWebsiteIntakeHandler({ getDatabase = database, verifyToken = verifyVercelOidcToken, notify = sendLeadNotification } = {}) {
+return async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   const supplied = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '')
   try {
-    await verifyVercelOidcToken(supplied, oidcVerificationOptions())
+    await verifyToken(supplied, oidcVerificationOptions())
   } catch {
     return res.status(401).json({ error: 'Unauthorized' })
   }
@@ -202,7 +203,7 @@ export default async function handler(req, res) {
     if (!EVENT_TYPES.has(body.eventType)) return res.status(400).json({ error: 'Invalid event type' })
     if (!body.source || cleanString(body.source, 120) !== body.source) return res.status(400).json({ error: 'Invalid source' })
 
-    const db = await database()
+    const db = await getDatabase()
     const eventRef = db.collection('customerEvents').doc(body.eventId)
     if ((await eventRef.get()).exists) return res.status(200).json({ saved: true, duplicate: true })
 
@@ -272,6 +273,15 @@ export default async function handler(req, res) {
         page: body.page || {},
         createdAt: FieldValue.serverTimestamp(),
       })
+      if (body.eventType === 'review_submission') transaction.set(db.collection('reviewSubmissions').doc(body.eventId), {
+        customerId: customerRef.id,
+        platform: cleanString(body.details?.platform || 'private', 50),
+        submissionUrl: cleanString(body.details?.reviewUrl || '', 2000),
+        feedback: cleanString(body.details?.feedback || body.details?.reviewText || body.details?.notes || '', 4000),
+        rating: cleanString(body.details?.rating || '', 10),
+        status: 'pending', source: body.source, eventId: body.eventId,
+        createdAt: FieldValue.serverTimestamp(),
+      })
       if (commercialRef) transaction.set(commercialRef, {
         customerId: customerRef.id,
         businessName: cleanString(contact.business, 200),
@@ -296,7 +306,7 @@ export default async function handler(req, res) {
     })
 
     try {
-      const notice = await sendLeadNotification(body, customerRef.id)
+      const notice = await notify(body, customerRef.id)
       if (shouldAlert) await alertRef.set({
         notificationStatus: notice.fallback ? 'fallback_sent' : (notice.sent ? 'sent' : 'unconfigured'),
         ...(notice.primaryError ? { notificationError: notice.primaryError } : {}),
@@ -318,3 +328,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Website intake failed' })
   }
 }
+
+}
+export default createWebsiteIntakeHandler()

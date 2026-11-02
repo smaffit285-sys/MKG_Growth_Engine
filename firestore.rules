@@ -79,6 +79,16 @@ service cloud.firestore {
       allow create, update, delete: if isWriter();
     }
 
+    match /publishedProof/{slug} {
+      allow read: if isOperator();
+      allow create, update: if isOwnerOrAdmin()
+        && request.resource.data.slug == slug
+        && request.resource.data.publicationStatus == 'published'
+        && request.resource.data.publicationConsent == true
+        && request.resource.data.keys().hasOnly(['title', 'slug', 'knifeType', 'problem', 'workPerformed', 'result', 'location', 'serviceDate', 'beforeImage', 'afterImage', 'publicationStatus', 'publicationConsent']);
+      allow delete: if isOwnerOrAdmin();
+    }
+
     match /proofAssets/{assetId} {
       allow read: if isOperator();
       allow create, update, delete: if isWriter();

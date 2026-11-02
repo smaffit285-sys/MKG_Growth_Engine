@@ -151,7 +151,7 @@ exports.sendReviewApprovedSMS = onDocumentUpdated('reviewSubmissions/{reviewId}'
 
       await sendSMS(
               phone,
-              `$10 reward credit added to your ${BRAND.shorthand} account. Thank you for sharing your experience!`
+              `Thank you for sharing your experience with ${BRAND.businessName}. We appreciate your feedback. Reply STOP to opt out.`
             );
                                                           console.log(`Review approved SMS sent to ${phone}`);
                                                     } catch (err) {

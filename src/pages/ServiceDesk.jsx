@@ -368,6 +368,7 @@ export default function ServiceDesk() {
     <div className="p-4 md:p-7 lg:p-9 max-w-[1500px] mx-auto space-y-6">
       <PageHeader eyebrow="Field workflow" title="New service" description="Choose the customer, record the work, confirm payment, and save. The service, invoice, customer update, and activity record commit together." actions={<>
         <button onClick={resetService} className="btn-secondary"><RotateCcw size={18} /> Clear form</button>
+        {savedService && <a href={`/proof?serviceId=${encodeURIComponent(savedService.serviceRecordId)}`} className="btn-secondary">Create case study</a>}
         {savedService && <a href={`/customer/${savedService.customerId}`} className="btn-secondary"><UsersRound size={18} /> Customer</a>}
         {savedService && <a href={`sms:${savedService.customerPhone || ''}?&body=${encodeURIComponent(invoiceSms)}`} className="btn-primary">Text summary</a>}
       </>} />
